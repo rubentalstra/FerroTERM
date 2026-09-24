@@ -890,6 +890,69 @@ impl FhirClient {
         Ok(answer.first())
     }
 
+    /// Reads the `ConceptMap` one root holds for a canonical, for authoring.
+    ///
+    /// The resource comes back as the server sent it, for the reason
+    /// [`FhirClient::authored`] records: an update replaces the whole resource
+    /// (<https://hl7.org/fhir/R4B/http.html#update>), so an element the editor
+    /// does not draw still has to reach the server again.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong. A root
+    /// that holds no such concept map answers `Ok(None)`, which is a different
+    /// answer from a read that failed.
+    pub(crate) async fn authored_map(
+        &self,
+        version: FhirVersion,
+        canonical: &str,
+    ) -> Result<Option<serde_json::Value>, FhirError> {
+        let filter = SearchFilter {
+            url: canonical.to_owned(),
+            version: String::new(),
+        };
+        let url = self.search_url(version, CONCEPT_MAP, &filter);
+        let answer: authoring::AuthoredSearch = self.get_json(&url).await?;
+        Ok(answer.first_of(CONCEPT_MAP))
+    }
+
+    /// The address a `ConceptMap/$translate` sent as a `POST` is addressed to.
+    ///
+    /// An operation invoked by `POST` carries every parameter in its
+    /// `Parameters` body (<https://hl7.org/fhir/R4B/operations.html#request>),
+    /// so the address is the operation itself and nothing else.
+    pub(crate) fn translate_post_url(&self, version: FhirVersion) -> String {
+        RequestUrl::new()
+            .segment(version.segment())
+            .segment(CONCEPT_MAP)
+            .segment("$translate")
+            .render(&self.root)
+    }
+
+    /// Translates a code through a concept map the browser sends inline.
+    ///
+    /// This is how a map that has never been saved is previewed: the operation
+    /// defines a `conceptMap` parameter carrying the map itself, and a server
+    /// is free not to accept one
+    /// (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>), which
+    /// arrives here as an ordinary refusal for the caller to fall back from.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn translate_inline(
+        &self,
+        version: FhirVersion,
+        request: &TranslateRequest,
+        map: &serde_json::Value,
+    ) -> Result<TranslateAnswer, FhirError> {
+        self.post_json(
+            &self.translate_post_url(version),
+            &request.body(version, map),
+        )
+        .await
+    }
+
     /// The codes one value set expands to, in the order the server sent them.
     ///
     /// The editor's coded controls offer what the served root says the element

@@ -24,6 +24,10 @@ use leptos_router::params::Params;
 
 use crate::auth::Session;
 use crate::auth::scopes::Letter;
+use crate::components::coded::Codes;
+use crate::components::coded::Control;
+use crate::components::coded::coded_control;
+use crate::components::coded::codes_of;
 use crate::components::failure::Failure;
 use crate::components::shell::SelectedVersion;
 use crate::components::spinner::Spinner;
@@ -79,15 +83,6 @@ struct EditorQuery {
     system: Option<String>,
 }
 
-/// One code offered by a coded control.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-struct Coded {
-    /// The code itself, which is what the resource carries.
-    code: String,
-    /// The display the server sent for it, empty where it sent none.
-    display: String,
-}
-
 /// Authors one local code system, or shows a built one read-only.
 ///
 /// The canonical is read reactively: a link from one system to another matches
@@ -137,9 +132,9 @@ pub(crate) fn EditorPage() -> impl IntoView {
     });
     let standing = standing_of(capabilities, system);
 
-    let statuses = coded(&client, version, PUBLICATION_STATUS);
-    let contents = coded(&client, version, CONTENT_MODE);
-    let kinds = coded(&client, version, PROPERTY_TYPE);
+    let statuses = codes_of(&client, version, bound(PUBLICATION_STATUS));
+    let contents = codes_of(&client, version, bound(CONTENT_MODE));
+    let kinds = codes_of(&client, version, bound(PROPERTY_TYPE));
 
     let heading = view! {
         <Title text=move || title_of(&system.get()) />
@@ -240,52 +235,12 @@ fn title_of(system: &str) -> String {
     }
 }
 
-/// The codes one value set expands to, as the signals a control reads.
+/// The canonical of a value set one element is bound to, as a signal.
 ///
-/// A value set the root refuses to expand leaves the control with the code the
-/// resource already carries and nothing else, and the control says so in the
-/// server's own words rather than looking like a list with one entry in it.
-fn coded(client: &FhirClient, version: Signal<FhirVersion>, canonical: &'static str) -> Codes {
-    let client = client.clone();
-    let expanded = LocalResource::new(move || {
-        let client = client.clone();
-        let version = version.get();
-        async move { client.value_set_codes(version, canonical).await }
-    });
-    Codes {
-        offered: Signal::derive(move || {
-            expanded.with(|answered| {
-                answered
-                    .as_ref()
-                    .and_then(|read| read.as_ref().ok())
-                    .map(|rows| {
-                        rows.iter()
-                            .map(|row| Coded {
-                                code: row.code.clone(),
-                                display: row.display.clone().unwrap_or_default(),
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default()
-            })
-        }),
-        refused: Signal::derive(move || {
-            expanded.with(|answered| {
-                answered
-                    .as_ref()
-                    .and_then(|read| read.as_ref().err().map(ToString::to_string))
-            })
-        }),
-    }
-}
-
-/// The codes one coded control offers, and why it has none when it has none.
-#[derive(Clone, Copy)]
-struct Codes {
-    /// The codes the value set expanded to.
-    offered: Signal<Vec<Coded>>,
-    /// What the server said instead, when the expansion did not answer.
-    refused: Signal<Option<String>>,
+/// The bindings of `CodeSystem` are the same on every served version, so this
+/// is a constant read through the signal the control takes.
+fn bound(canonical: &'static str) -> Signal<String> {
+    Signal::derive(move || canonical.to_owned())
 }
 
 /// The three coded controls' options, so one argument carries them together.
@@ -673,99 +628,6 @@ fn metadata_section(draft: RwSignal<Draft>, readonly: Signal<bool>, options: Opt
                 </div>
             </div>
         </section>
-    }
-    .into_any()
-}
-
-/// What one coded control is called, and how its label is drawn.
-///
-/// The four travel together so the control takes one argument for its naming
-/// rather than four the caller could pass in the wrong order.
-struct Control {
-    /// The `id` the label points at.
-    id: String,
-    /// The `name` the control carries.
-    name: &'static str,
-    /// The label a reader reads.
-    label: &'static str,
-    /// Whether the label is for a screen reader alone, because a column
-    /// header already names the control for a sighted reader.
-    sr_only: bool,
-}
-
-/// One control over a code of a value set the server expanded.
-///
-/// The select is driven by `prop:value` because its options arrive after the
-/// form is built, and the code the resource already carries is offered whether
-/// or not the expansion did: a control that dropped it would silently rewrite
-/// the resource on the next save.
-fn coded_control(
-    control: Control,
-    codes: Codes,
-    readonly: Signal<bool>,
-    held: Signal<String>,
-    mut chose: impl FnMut(String) + 'static,
-) -> AnyView {
-    let Control {
-        id,
-        name,
-        label,
-        sr_only,
-    } = control;
-    let offered = move || {
-        let held = held.get();
-        let mut drawn: Vec<AnyView> = Vec::new();
-        let listed = codes
-            .offered
-            .with(|codes| codes.iter().any(|coded| coded.code == held));
-        if !listed {
-            let text = if held.is_empty() {
-                "Choose one".to_owned()
-            } else {
-                held.clone()
-            };
-            drawn.push(view! { <option value=held.clone()>{text}</option> }.into_any());
-        }
-        drawn.extend(codes.offered.with(|codes| {
-            codes
-                .iter()
-                .map(|coded| {
-                    let code = coded.code.clone();
-                    let text = if coded.display.is_empty() {
-                        coded.code.clone()
-                    } else {
-                        format!("{} ({})", coded.display, coded.code)
-                    };
-                    view! { <option value=code>{text}</option> }.into_any()
-                })
-                .collect::<Vec<AnyView>>()
-        }));
-        drawn
-    };
-    let named = StoredValue::new(id);
-    let label_class = if sr_only { "sr-only" } else { styles::LABEL };
-    view! {
-        <div class="grid gap-tight">
-            <label for=move || named.with_value(Clone::clone) class=label_class>
-                {label}
-            </label>
-            <select
-                id=move || named.with_value(Clone::clone)
-                name=name
-                class=styles::INPUT
-                disabled=move || readonly.get()
-                prop:value=move || held.get()
-                on:change=move |event: Event| chose(event_target_value(&event))
-            >
-                {offered}
-            </select>
-            <Show when=move || codes.refused.with(Option::is_some) fallback=|| ()>
-                <p role="status" class=styles::HINT>
-                    "This server did not expand the value set this control's codes come from, so it offers only what the resource already carries: "
-                    {move || codes.refused.get()}
-                </p>
-            </Show>
-        </div>
     }
     .into_any()
 }

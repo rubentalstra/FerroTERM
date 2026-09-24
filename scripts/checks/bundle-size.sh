@@ -63,10 +63,25 @@ fi
 baseline=""
 if [[ -n "$base" ]]; then
   if ! baseline="$(git show "$base:$bars" 2>/dev/null)"; then
-    # A bars file the merge base does not carry is a bundle this change adds,
-    # so there is no figure to measure growth against and only the ceilings
-    # are checked. A file that USED to exist cannot reach this branch: it
-    # would still be readable at the base.
+    # A bars file the merge base does not carry is either a bundle this change
+    # ADDS, which has no figure to measure growth against, or one it RENAMED,
+    # which does. The two read identically here, and taking the second for the
+    # first drops the growth budget without saying so, so a bars file the base
+    # carried and the head no longer has fails the run (#636).
+    dropped=""
+    while IFS= read -r held; do
+      [[ -z "$held" ]] || [[ -e "$held" ]] || dropped="$dropped $held"
+    done < <(git ls-tree -r --name-only "$base" -- "$(dirname "$bars")" |
+      grep -E '(^|/)bundle-size[^/]*\.json$' || true)
+    if [[ -n "$dropped" ]]; then
+      {
+        echo "bundle-size: $bars is absent at $base, and$dropped is gone from the head"
+        echo "  a renamed or deleted bars file measures no growth, so this run would have"
+        echo "  checked the ceilings alone and charged the next change for this one's bytes"
+        echo "  keep the path, or move the figures into the new file and point --base at it"
+      } >&2
+      exit 1
+    fi
     echo "bundle-size: $bars is new at $base, so only the ceilings are checked"
   fi
 fi

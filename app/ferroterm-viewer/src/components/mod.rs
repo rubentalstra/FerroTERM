@@ -14,6 +14,8 @@
 pub(crate) const NOT_DECLARED: &str = "not declared";
 
 pub(crate) mod button;
+#[cfg(feature = "editor")]
+pub(crate) mod coded;
 pub(crate) mod failure;
 pub(crate) mod field;
 pub(crate) mod health;

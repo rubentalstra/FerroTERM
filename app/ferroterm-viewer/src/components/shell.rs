@@ -48,6 +48,8 @@ use crate::routes::ABOUT_PATH;
 use crate::routes::CODE_SYSTEM_EDITOR_PATH;
 #[cfg(feature = "editor")]
 use crate::routes::COMPOSE_PATH;
+#[cfg(feature = "editor")]
+use crate::routes::CONCEPT_MAP_EDITOR_PATH;
 use crate::routes::CONCEPT_MAPS_PATH;
 use crate::routes::EXPAND_PATH;
 use crate::routes::FIND_PATH;
@@ -109,11 +111,12 @@ const PUBLISH: [NavItem; 2] = [
 /// Only the editor bundle carries the authoring screens, so only that bundle's
 /// sidebar leads to them.
 #[cfg(feature = "editor")]
-const PUBLISH: [NavItem; 4] = [
+const PUBLISH: [NavItem; 5] = [
     NavItem(VALUE_SETS_PATH, "Value sets", icon::VALUE_SETS),
     NavItem(CONCEPT_MAPS_PATH, "Concept maps", icon::CONCEPT_MAPS),
     NavItem(CODE_SYSTEM_EDITOR_PATH, "Edit a code system", icon::EDIT),
     NavItem(COMPOSE_PATH, "Compose a value set", icon::EDIT),
+    NavItem(CONCEPT_MAP_EDITOR_PATH, "Edit a concept map", icon::EDIT),
 ];
 
 /// The one screen about this server and this viewer, rather than about a code.
@@ -357,6 +360,10 @@ pub(crate) fn EditorRoute() -> impl MatchNestedRoutes + Clone {
                 view=|| crate::pages::editor::EditorPage().into_any()
             />
             <Route path=path!("/compose") view=|| ValueSetComposerPage().into_any() />
+            <Route
+                path=path!("/conceptmap")
+                view=|| crate::pages::concept_map_editor::ConceptMapEditorPage().into_any()
+            />
         }
         .into_inner()
     }

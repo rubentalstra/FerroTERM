@@ -9,6 +9,8 @@ mod app;
 mod auth;
 mod comparison;
 mod components;
+#[cfg(feature = "editor")]
+mod concept_map_editor;
 mod density;
 #[cfg(feature = "editor")]
 mod editor;
