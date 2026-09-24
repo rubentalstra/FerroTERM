@@ -296,6 +296,48 @@ from the description to a code's own designations
 server's own words. Content your server serves from its loaded indexes has no
 write path, so it opens here to read and offers no save under any role.
 
+## History and restoring a version
+
+Every editing screen carries a **History of this resource** link once the
+server holds the resource, which opens `/ui/editor/history` on it. The screen
+lists the versions the server holds, newest first, with when each was written,
+the interaction that wrote it where the answer states one, and `meta.source`
+where your server states one. `meta.source` is a source system rather than a
+person: FHIR keeps who changed a resource in `Provenance` and `AuditEvent`, so
+the column is headed **Source system** and is usually empty.
+
+How the list is read depends on what your server declares in its
+`CapabilityStatement`. A server declaring `history-instance` answers the whole
+list at once. FerroTERM declares `vread`, so the viewer reads each earlier
+version back one request at a time, counting down from the version the resource
+states, and the screen says so. Only the most recent versions are listed.
+
+**Compare two versions** picks an earlier and a later one and lists the
+elements they disagree about: the path, whether it was added, removed or
+changed, and both values. It compares the two documents structurally rather
+than as text, so what you read is which elements moved.
+`meta.versionId` and `meta.lastUpdated` are left out, because your server
+assigns both on every write and they differ between any two versions. The two
+versions are in the address, so a comparison is a link you can send.
+
+**Restore this version** writes that version's whole resource back as a new
+version. It states `If-Match` of the version the server holds now, not the one
+being restored, so a change someone else made since you opened the screen is
+refused with 412 and the screen offers to reload. The restore control appears
+only for an account whose token carries the write scope for the resource type;
+everyone else reads the same versions and restores nothing.
+
+### Seeing what a release changed
+
+Where the [synchronisation service](sync.md) is running and its admin listener
+is reachable at the same address the viewer is served from, the screen also
+lists what the newest run found about the resource you have open: the codes it
+names that the activated release made inactive, removed, or pushed outside the
+value set they came through. The listener authenticates nobody, so publish it
+nowhere else; a reverse proxy that maps `/runs` on your server's origin to the
+sync service's listener is what makes these findings visible, and without one
+the screen does not show the section.
+
 ## About these screenshots
 
 Each image is a capture of a running server, taken by a browser driven through

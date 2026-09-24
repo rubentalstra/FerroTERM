@@ -32,6 +32,7 @@ use crate::auth::Session;
 use crate::auth::scopes::Letter;
 use crate::components::failure::Failure;
 use crate::components::field::group;
+use crate::components::history::history_offer;
 use crate::components::icon;
 use crate::components::icon::Icon;
 use crate::components::reading::Reading;
@@ -58,13 +59,11 @@ use crate::offers::published;
 use crate::paging::MAX_COUNT;
 use crate::paging::Page;
 use crate::routes::COMPOSE_PATH;
+use crate::routes::COMPOSER_ID_PARAM;
 use crate::routes::VERSION_PARAM;
 use crate::routes::base_url;
 use crate::styles;
 use serde_json::Value;
-
-/// The query parameter naming the value set being composed.
-const ID_PARAM: &str = "id";
 
 /// The query parameter carrying the preview's text filter.
 const FILTER_PARAM: &str = "filter";
@@ -127,7 +126,12 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
 
     let query = use_query_map();
     let id: Memo<String> = Memo::new(move |_| {
-        query.with(|map| map.get(ID_PARAM).unwrap_or_default().trim().to_owned())
+        query.with(|map| {
+            map.get(COMPOSER_ID_PARAM)
+                .unwrap_or_default()
+                .trim()
+                .to_owned()
+        })
     });
     let page: Memo<Preview> = Memo::new(move |_| {
         query.with(|map| Preview {
@@ -205,6 +209,7 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
     .into_any();
 
     let editable = editable(id, writable);
+    let versions = history_offer(VALUE_SET, id.into(), version);
     let refused_read = read_refusal(read);
     let refused_capabilities = capability_refusal(declared);
     let banner = read_only_banner(writable, id, session);
@@ -220,8 +225,8 @@ pub(crate) fn ValueSetComposerPage() -> impl IntoView {
         {heading}
         <div class="mt-loose grid items-start gap-loose lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <div class="min-w-0">
-                {refused_read} {refused_capabilities} {banner} {identity} {clauses} {actions}
-                {refused}
+                {versions} {refused_read} {refused_capabilities} {banner} {identity} {clauses}
+                {actions} {refused}
             </div>
             <div class="min-w-0">{preview}</div>
         </div>
@@ -1463,7 +1468,7 @@ fn save_section(
                         let target = base_url()
                             .segment(COMPOSE_PATH)
                             .query(VERSION_PARAM, version.segment())
-                            .query(ID_PARAM, &id)
+                            .query(COMPOSER_ID_PARAM, &id)
                             .render("");
                         navigate.with_value(|navigate| {
                             navigate(
@@ -1686,7 +1691,7 @@ fn address(id: &str, version: FhirVersion, page: &Preview) -> String {
         .segment(COMPOSE_PATH)
         .query(VERSION_PARAM, version.segment());
     if !id.is_empty() {
-        url = url.query(ID_PARAM, id);
+        url = url.query(COMPOSER_ID_PARAM, id);
     }
     if let Some(filter) = page.filter.as_ref() {
         url = url.query(FILTER_PARAM, filter);

@@ -60,6 +60,75 @@ pub(crate) const CODE_SYSTEM_EDITOR_PATH: &str = "codesystem";
 #[cfg(feature = "editor")]
 pub(crate) const CONCEPT_MAP_EDITOR_PATH: &str = "conceptmap";
 
+/// The history and restore screen's path below the base, in the editor bundle.
+#[cfg(feature = "editor")]
+pub(crate) const HISTORY_PATH: &str = "history";
+
+/// The query parameter that carries a resource type into the history screen.
+#[cfg(feature = "editor")]
+pub(crate) const TYPE_PARAM: &str = "type";
+
+/// The query parameter that carries a logical id into the history screen.
+#[cfg(feature = "editor")]
+pub(crate) const ID_PARAM: &str = "id";
+
+/// The query parameter the code system editor takes its canonical in.
+///
+/// It is the field the screen's own query type names, so the two move
+/// together or the link it builds stops opening what it says it opens.
+#[cfg(feature = "editor")]
+pub(crate) const EDITOR_SYSTEM_PARAM: &str = "system";
+
+/// The query parameter the value set composer takes its logical id in.
+#[cfg(feature = "editor")]
+pub(crate) const COMPOSER_ID_PARAM: &str = "id";
+
+/// The query parameter the concept map editor takes its canonical in.
+#[cfg(feature = "editor")]
+pub(crate) const MAP_EDITOR_PARAM: &str = "map";
+
+/// The link back to the screen that edits one resource.
+///
+/// Each authoring screen opens the resource it edits by the fact it addresses
+/// it with: a canonical for a code system and a concept map, the logical id
+/// for a value set. A type no screen here edits answers `None`.
+#[cfg(feature = "editor")]
+pub(crate) fn editing_link(
+    resource_type: &str,
+    canonical: &str,
+    id: &str,
+    version: FhirVersion,
+) -> Option<String> {
+    let (path, name, value) = match resource_type {
+        "CodeSystem" => (CODE_SYSTEM_EDITOR_PATH, EDITOR_SYSTEM_PARAM, canonical),
+        "ValueSet" => (COMPOSE_PATH, COMPOSER_ID_PARAM, id),
+        "ConceptMap" => (CONCEPT_MAP_EDITOR_PATH, MAP_EDITOR_PARAM, canonical),
+        _unedited => return None,
+    };
+    let mut url = base_url()
+        .segment(path)
+        .query(VERSION_PARAM, version.segment());
+    if !value.is_empty() {
+        url = url.query(name, value);
+    }
+    Some(url.render(""))
+}
+
+/// The link that opens one resource's versions, from a screen editing it.
+///
+/// The type and the id are the two facts the history interaction addresses an
+/// instance by (<https://hl7.org/fhir/R4B/http.html#history>), so they are
+/// what the address carries.
+#[cfg(feature = "editor")]
+pub(crate) fn history_link(resource_type: &str, id: &str, version: FhirVersion) -> String {
+    base_url()
+        .segment(HISTORY_PATH)
+        .query(VERSION_PARAM, version.segment())
+        .query(TYPE_PARAM, resource_type)
+        .query(ID_PARAM, id)
+        .render("")
+}
+
 /// Where the server mounts the editor bundle, for the reader bundle to link to.
 ///
 /// It is a whole address rather than a route of this bundle: the two bundles
@@ -198,6 +267,10 @@ pub(crate) fn nav_section(pathname: &str) -> Option<&'static str> {
         Some(COMPOSE_PATH) => Some(COMPOSE_PATH),
         #[cfg(feature = "editor")]
         Some(CONCEPT_MAP_EDITOR_PATH) => Some(CONCEPT_MAP_EDITOR_PATH),
+        // The versions of a resource are reached from the screen editing it,
+        // so that screen's entry stays marked while a reader reads them.
+        #[cfg(feature = "editor")]
+        Some(HISTORY_PATH) => None,
         Some(CONCEPT_MAPS_PATH) => Some(CONCEPT_MAPS_PATH),
         Some(TRANSLATE_PATH) => Some(TRANSLATE_PATH),
         // The command bar is on every screen rather than in the sidebar, and
@@ -395,6 +468,54 @@ mod tests {
             nav_section(&under("/systems/https:%2F%2Fterminology.example%2Fanimals")),
             Some(OVERVIEW_PATH),
             "a reader reading one system is still under the screen that listed it"
+        );
+    }
+
+    #[cfg(feature = "editor")]
+    #[test]
+    fn a_history_link_names_the_instance_the_versions_belong_to() {
+        assert_eq!(
+            history_link("CodeSystem", "colours/1", FhirVersion::R4B),
+            under("/history?fhir=r4b&type=CodeSystem&id=colours%2F1"),
+            "an id carrying a separator stays inside the parameter it belongs to"
+        );
+        assert_eq!(
+            nav_section(&under("/history")),
+            None,
+            "the versions are reached from the screen editing the resource"
+        );
+    }
+
+    #[cfg(feature = "editor")]
+    #[test]
+    fn each_resource_type_links_back_to_the_screen_that_edits_it() {
+        let system = "https://terminology.example/colours";
+        assert_eq!(
+            editing_link("CodeSystem", system, "colours", FhirVersion::R4B),
+            Some(under(
+                "/codesystem?fhir=r4b&system=https%3A%2F%2Fterminology.example%2Fcolours"
+            ))
+        );
+        assert_eq!(
+            editing_link("ValueSet", system, "palette", FhirVersion::R5),
+            Some(under("/compose?fhir=r5&id=palette")),
+            "the composer opens a value set by its logical id"
+        );
+        assert_eq!(
+            editing_link("ConceptMap", system, "m", FhirVersion::R6),
+            Some(under(
+                "/conceptmap?fhir=r6&map=https%3A%2F%2Fterminology.example%2Fcolours"
+            ))
+        );
+        assert_eq!(
+            editing_link("Patient", system, "p", FhirVersion::R4),
+            None,
+            "no screen here edits a type the editor does not write"
+        );
+        assert_eq!(
+            editing_link("CodeSystem", "", "", FhirVersion::R4),
+            Some(under("/codesystem?fhir=r4")),
+            "a resource with nothing to address it by opens the empty screen"
         );
     }
 

@@ -534,6 +534,7 @@ the same story: `tools/ferroterm-build` does that, offline, once per edition.
 | Edit a code system | `/ui/editor/codesystem` | `GET /{v}/CodeSystem?url=` for the resource, `GET /{v}/metadata?mode=terminology` for whether an artifact backs it, `ValueSet/$expand` for the codes its coded controls offer, then `POST`/`PUT` with `If-Match` and `CodeSystem/$validate-code` on what the save retired. In the editor bundle only |
 | Compose a value set | `/ui/editor/compose` | `GET /{v}/ValueSet` for the value sets to draw in and `GET /{v}/ValueSet/{id}` for the one being edited, `GET /{v}/metadata?mode=terminology` for the systems and the filters each served version declares, `ValueSet/$expand` by `POST` for the code search and for the preview of the unsaved compose, then `POST`/`PUT` with `If-Match`. In the editor bundle only |
 | Edit a concept map | `/ui/editor/conceptmap` | `GET /{v}/ConceptMap?url=` for the resource, `ValueSet/$expand` for the relationship codes the version admits and for every code picker, `ConceptMap/$translate` by `POST` with the map inline for the preview, then `POST`/`PUT` with `If-Match`. In the editor bundle only |
+| Versions of a resource | `/ui/editor/history` | `GET /{v}/metadata` for which version interaction the root declares, `GET /{v}/{type}/{id}` for the resource, then the history `Bundle` or one `vread` per earlier version; `PUT` with `If-Match` to restore one; `GET /runs` and `GET /runs/{id}` for the last synchronisation's findings, where a deployment put that listener behind this origin. In the editor bundle only |
 | Signing in | `/ui/editor/callback` | `GET /{v}/.well-known/smart-configuration`, then the issuer's token endpoint. Not a place a reader goes: the identity provider sends them through it |
 
 `/ui/versions`, `/ui/evidence` and `/ui/settings` were screens of their own and
@@ -698,6 +699,62 @@ never been saved is translated through by `POST`. A server "may choose not to
 accept concept maps in this fashion"
 (<https://hl7.org/fhir/R4B/conceptmap-operation-translate.html>), so a refusal
 falls back to the saved map, and the panel says which of the two answered.
+
+### The versions of a resource
+
+**Each authoring screen links to the versions of what it has open**, and the
+address names the resource by its type and its logical id, which is how the
+history and version-read interactions address an instance
+(<https://hl7.org/fhir/R4B/http.html#history>,
+<https://hl7.org/fhir/R4B/http.html#vread>).
+
+**The list is read with whichever interaction the root declares.** A root that
+declares `history-instance` answers the whole list in one `Bundle` of type
+`history`, whose entries carry `request.method` and `response.lastModified`. A
+root that declares only `vread` is asked one version at a time, counting down
+from the version the resource states, and the screen says that is what it did:
+a version identifier is opaque in FHIR
+(<https://hl7.org/fhir/R4B/resource.html#meta>), so a root whose identifiers
+are not counted shows the one it stated and nothing earlier. A root that
+declares neither shows no list and says which interaction is missing. The
+FerroTERM server declares `vread` and not `history-instance` today, so that is
+the path a FerroTERM deployment takes.
+
+**`meta.source` is drawn as a source system, never as an author.** FHIR
+defines it as "a uri that identifies the source system of the resource" and
+tells a server to leave it alone on a write; who changed a resource lives in
+`Provenance` and `AuditEvent` (<https://hl7.org/fhir/R4B/resource.html#meta>).
+The column is headed "Source system" and is empty on a server that states
+none, which is most of them.
+
+**The difference between two versions is our own design; no FHIR specification
+governs it.** It is a structural comparison of the two JSON documents, path by
+path, rendered as added, removed and changed rows in a table, so a reader sees
+which elements changed rather than which bytes moved. Arrays compare by
+position, because that is the order a resource states them in.
+`meta.versionId` and `meta.lastUpdated` are left out: the server assigns both
+on every write (<https://hl7.org/fhir/R4B/http.html#update>), so they differ
+between any two versions and say nothing about the edit. Which two versions
+are compared is in the address, so a comparison is a link.
+
+**A restore is an ordinary update.** It sends the chosen version's whole
+resource, every element the screen never drew included, with `If-Match` of the
+version the server holds NOW rather than the one being restored. That is what
+makes a concurrent edit a `412` rather than an overwrite, and the screen shows
+it as one, with the server's own `OperationOutcome` and a control that reloads.
+A reader without the write scope sees the same versions and no restore control.
+
+**The synchronisation findings are shown where the sync service is reachable,
+and nowhere else.** Nothing on the FHIR wire tells the viewer that a sync
+service exists: the service is a separate process with its own admin listener,
+which `website/book/src/operate/sync.md` says authenticates nobody and is never
+published. The viewer is same-origin by mandate (§2), so it reads `GET /runs`
+and `GET /runs/{id}` relative to the address it was served from, which answers
+only where a deployment put that listener behind the same origin. Where nothing
+answers, the section is not in the document at all. What it lists is the
+findings of the newest run that name the resource on screen: the code, the
+system it comes from, what the release did to it, and the release that did it.
+The run record states no display for a code, so the screen does not invent one.
 
 ### Signing in
 
@@ -1006,24 +1063,44 @@ today is breached by honest work next week. The two jobs are split:
   detail, a hierarchy, capability gating and a language picker over four
   requests.
 
-**The editor bundle's ceiling: 750,000 bytes.** It is the reader ceiling plus
-one authoring screen for each resource type the server writes. The arithmetic
-is §13's own, on the figures already recorded here:
+**The editor bundle's ceiling: 800,000 bytes.** It is the reader ceiling plus
+the measured cost of each authoring screen the bundle carries.
+
+It was 750,000, derived before any authoring screen had been measured: the
+reader ceiling plus three screens at the largest this project had then
+measured, 68,519 each. That claim named one authoring screen per resource type
+the server writes, so the versions, difference and restore screen (#637) sat
+outside it, and the same arithmetic on real figures runs past 750,000 with it
+in. Every screen is now measured, so the guess is replaced the way §13
+replaced the reader's:
 
 | | gzipped |
 |---|---|
 | the reader ceiling, which the editor bundle carries whole | 540,000 |
-| three authoring screens, at the largest screen this project has measured (68,519) | 205,557 |
-| the sum, rounded up | 750,000 |
+| the code system editor with the sign-in (#655) | 93,433 |
+| the value set composer (#658) | 66,910 |
+| the concept map editor (#661) | 53,854 |
+| the versions, difference and restore screen (#637) | 43,001 |
+| the sum, rounded up to the nearest 10,000 | 800,000 |
 
-The three are `CodeSystem`, `ValueSet`, and `ConceptMap`, which is exactly the
-set the roles table in §9 names and the set the server exposes the write
-interactions on. The largest measured screen is the unit rather than the mean,
-because an authoring screen is a form, a list, a lifecycle and a refusal
-surface over one resource, which is the shape the concept browser had when it
-set that figure. The per-change budget is the reader's, 70,000 bytes, for the
-reason §13 already gives: it admits the largest screen measured and still
-refuses an increment nobody intended.
+Each screen's cost is the difference between the editor bundle's
+`measured_gzip_bytes` before and after it landed, read out of git; the first
+is measured against the reader bundle at the same commit, because that build
+is where the editor bundle begins. The figures are one host's, and that host
+reproduces every recorded figure to the byte, so the differences are the
+screens rather than the machines. The per-change budget stays the reader's,
+70,000 bytes, for the reason §13 already gives: it admits the largest screen
+measured and still refuses an increment nobody intended.
+
+The history screen took the reduction path above before its figure was
+recorded. `twiggy` put 6,898 pre-`wasm-opt` bytes in the derived decoders for
+the four types the sync service's run record is read through, against five
+fields a screen draws; reading the record out of the `serde_json::Value` the
+bundle already decodes removed them and bought **4,016 gzipped bytes**, from
+794,373 to 790,357; the screen came to rest at 789,212 once review had taken
+the rest of its findings. The reader bundle moved by 4 bytes downwards, because
+the one element the change adds to the capability statement is read only by the
+editor and is compiled behind the feature.
 
 **A change cannot make its own build green by editing a number.** The guard
 reads `measured_gzip_bytes` **out of git at the merge base**, not out of the

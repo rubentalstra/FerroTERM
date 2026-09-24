@@ -19,6 +19,8 @@ pub(crate) mod coded;
 pub(crate) mod failure;
 pub(crate) mod field;
 pub(crate) mod health;
+#[cfg(feature = "editor")]
+pub(crate) mod history;
 pub(crate) mod icon;
 pub(crate) mod mark;
 pub(crate) mod reading;

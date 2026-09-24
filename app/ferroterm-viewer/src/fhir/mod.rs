@@ -19,17 +19,19 @@ pub(crate) mod named;
 pub(crate) mod outcome;
 pub(crate) mod searchset;
 pub(crate) mod smart;
+#[cfg(feature = "editor")]
+pub(crate) mod sync;
 pub(crate) mod terminology;
 pub(crate) mod translate;
 pub(crate) mod validation;
 pub(crate) mod value_set;
 pub(crate) mod version;
-// TODO(#637): the history reader has no caller until the history and restore
-// screen lands, and nothing in this module has one at all in a bundle built
-// without the `editor` feature.
-#[expect(
-    dead_code,
-    reason = "the seam is wider than the screens that have landed on it"
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle carries a screen that writes or reads a version"
+    )
 )]
 pub(crate) mod write;
 
@@ -78,11 +80,12 @@ use crate::url::RequestUrl;
 /// (<https://hl7.org/fhir/R4B/http.html#mime-type>).
 const FHIR_JSON: &str = "application/fhir+json";
 
-/// The media type the SMART discovery document is served as.
+/// The media type of everything this viewer reads that is not FHIR.
 ///
-/// The specification fixes it, whatever the request asks for
-/// (<https://hl7.org/fhir/smart-app-launch/conformance.html>).
-const SMART_JSON: &str = "application/json";
+/// The SMART discovery document is served as this whatever the request asks
+/// for (<https://hl7.org/fhir/smart-app-launch/conformance.html>), and the
+/// sync service's admin listener answers ordinary JSON too.
+const PLAIN_JSON: &str = "application/json";
 
 /// The media type an OAuth token or revocation request sends (RFC 6749 §4.1.3).
 const FORM_ENCODED: &str = "application/x-www-form-urlencoded";
@@ -626,7 +629,7 @@ impl FhirClient {
         version: FhirVersion,
     ) -> Result<SmartConfiguration, FhirError> {
         let url = self.smart_configuration_url(version);
-        let response = send(Request::get(&url).header("Accept", SMART_JSON), &url).await?;
+        let response = send(Request::get(&url).header("Accept", PLAIN_JSON), &url).await?;
         self.read_json(response, &url).await
     }
 }
@@ -683,12 +686,12 @@ impl FhirClient {
 /// The server carries these interactions on `CodeSystem`, `ValueSet`, and
 /// `ConceptMap` (<https://hl7.org/fhir/R4B/http.html>), gated on a SMART scope
 /// where the deployment configured an issuer.
-// TODO(#637): `delete`, `history`, and `history_url` have no caller until the
-// history and restore screen lands, and no bundle carries the editor screens
-// unless it was built with the `editor` feature.
-#[expect(
-    dead_code,
-    reason = "the seam is wider than the screens that have landed on it"
+#[cfg_attr(
+    not(feature = "editor"),
+    expect(
+        dead_code,
+        reason = "only the editor bundle carries a screen that writes"
+    )
 )]
 impl FhirClient {
     /// The address a create posts to.
@@ -778,6 +781,13 @@ impl FhirClient {
     ///
     /// Returns the variant of [`FhirError`] describing what went wrong. A
     /// server that refuses says why in an `OperationOutcome`.
+    #[cfg_attr(
+        feature = "editor",
+        expect(
+            dead_code,
+            reason = "no authoring screen deletes a resource: a published code is retired in place"
+        )
+    )]
     pub(crate) async fn delete(
         &self,
         version: FhirVersion,
@@ -953,6 +963,114 @@ impl FhirClient {
         .await
     }
 
+    /// The address one version of one resource is read from.
+    ///
+    /// `vread` addresses a version below the instance
+    /// (<https://hl7.org/fhir/R4B/http.html#vread>), and both the id and the
+    /// version are one percent-encoded path segment each.
+    pub(crate) fn version_read_url(
+        &self,
+        version: FhirVersion,
+        resource_type: &str,
+        id: &str,
+        version_id: &str,
+    ) -> String {
+        RequestUrl::new()
+            .segment(version.segment())
+            .segment(resource_type)
+            .segment(id)
+            .segment("_history")
+            .segment(version_id)
+            .render(&self.root)
+    }
+
+    /// Reads one resource as the server holds it now.
+    ///
+    /// The resource comes back as the server sent it, because a restore sends
+    /// a whole resource back and an element this viewer has never heard of
+    /// cannot survive a typed read.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn resource(
+        &self,
+        version: FhirVersion,
+        resource_type: &str,
+        id: &str,
+        token: Option<&str>,
+    ) -> Result<serde_json::Value, FhirError> {
+        let url = self.resource_url(version, resource_type, id);
+        let request = bearing(Request::get(&url), token).header("Accept", FHIR_JSON);
+        let response = send(request, &url).await?;
+        self.read_json(response, &url).await
+    }
+
+    /// Reads one version of one resource (<https://hl7.org/fhir/R4B/http.html#vread>).
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn version_read(
+        &self,
+        version: FhirVersion,
+        resource_type: &str,
+        id: &str,
+        version_id: &str,
+        token: Option<&str>,
+    ) -> Result<serde_json::Value, FhirError> {
+        let url = self.version_read_url(version, resource_type, id, version_id);
+        let request = bearing(Request::get(&url), token).header("Accept", FHIR_JSON);
+        let response = send(request, &url).await?;
+        self.read_json(response, &url).await
+    }
+
+    /// The address the sync service's run list is read from.
+    ///
+    /// The listener is the sync service's own, and the viewer is same-origin,
+    /// so a deployment that wants its findings on screen puts the listener
+    /// behind the address the server is served from. Nothing answers there by
+    /// default.
+    pub(crate) fn runs_url(&self) -> String {
+        RequestUrl::new().segment("runs").render(&self.root)
+    }
+
+    /// The address one whole run record is read from.
+    pub(crate) fn run_url(&self, id: &str) -> String {
+        RequestUrl::new()
+            .segment("runs")
+            .segment(id)
+            .render(&self.root)
+    }
+
+    /// What the newest recorded synchronisation run found when it revalidated
+    /// the deployment's own resources.
+    ///
+    /// A deployment with no run list reachable answers a failure, which the
+    /// screen takes as nothing to show rather than as something to report.
+    ///
+    /// # Errors
+    ///
+    /// Returns the variant of [`FhirError`] describing what went wrong.
+    pub(crate) async fn latest_findings(&self) -> Result<Vec<sync::Finding>, FhirError> {
+        let listed: serde_json::Value = self.get_plain_json(&self.runs_url()).await?;
+        let Some(newest) = sync::newest_run(&listed) else {
+            return Ok(Vec::new());
+        };
+        let record: serde_json::Value = self.get_plain_json(&self.run_url(&newest)).await?;
+        Ok(sync::findings_of(&record))
+    }
+
+    /// Sends a plain JSON `GET` and decodes what it answers.
+    ///
+    /// The sync service's admin listener is not a FHIR endpoint, so the
+    /// request asks for ordinary JSON and a refusal carries no
+    /// `OperationOutcome`.
+    async fn get_plain_json<T: DeserializeOwned>(&self, url: &str) -> Result<T, FhirError> {
+        let response = send(Request::get(url).header("Accept", PLAIN_JSON), url).await?;
+        self.read_json(response, url).await
+    }
+
     /// The codes one value set expands to, in the order the server sent them.
     ///
     /// The editor's coded controls offer what the served root says the element
@@ -1107,7 +1225,7 @@ pub(crate) async fn revoke(sign_in: &SignIn, token: &str) -> Result<(), FhirErro
 /// Posts a form-encoded body to an OAuth endpoint and decodes the answer.
 async fn post_form<T: DeserializeOwned>(url: &str, body: &str) -> Result<T, FhirError> {
     let request = Request::post(url)
-        .header("Accept", SMART_JSON)
+        .header("Accept", PLAIN_JSON)
         .header("Content-Type", FORM_ENCODED)
         .body(body)
         .map_err(|error| FhirError::Transport {

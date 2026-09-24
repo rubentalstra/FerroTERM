@@ -31,6 +31,7 @@ mod concept_map_editor;
 mod docs_shots;
 mod editor;
 mod harness;
+mod history;
 mod sign_in;
 mod signed_in;
 mod viewer;

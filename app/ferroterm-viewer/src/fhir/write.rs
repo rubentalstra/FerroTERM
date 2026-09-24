@@ -9,6 +9,7 @@
 
 use http::StatusCode;
 use serde::Deserialize;
+use serde_json::Value;
 
 use crate::fhir::error::FhirError;
 
@@ -52,12 +53,24 @@ pub(crate) struct Meta {
     #[serde(default)]
     #[serde(rename = "lastUpdated")]
     pub(crate) last_updated: Option<String>,
+    /// `meta.source`, where a server records where the content came from
+    /// (<https://hl7.org/fhir/R4B/resource.html#meta>). Most do not.
+    #[serde(default)]
+    pub(crate) source: Option<String>,
 }
 
 impl StoredResource {
     /// The version an update of this resource states in `If-Match`.
     pub(crate) fn version_id(&self) -> Option<&str> {
         self.meta.as_ref()?.version_id.as_deref()
+    }
+
+    /// The elements read here, taken out of a resource the server sent.
+    ///
+    /// Every field is optional, so any JSON object reads; a document that is
+    /// not an object reads as the empty resource.
+    pub(crate) fn of(resource: &Value) -> Self {
+        serde_json::from_value(resource.clone()).unwrap_or_default()
     }
 }
 
@@ -78,9 +91,16 @@ pub(crate) struct History {
 pub(crate) struct HistoryEntry {
     /// The resource as it stood at that version; absent for a delete
     /// (<https://hl7.org/fhir/R4B/http.html#history>).
-    pub(crate) resource: Option<StoredResource>,
+    ///
+    /// It is kept as the server sent it, because a restore sends that whole
+    /// resource back and an element this viewer has never heard of cannot
+    /// survive a typed read.
+    pub(crate) resource: Option<Value>,
     /// `entry.request`, which names the interaction that made the version.
     pub(crate) request: Option<HistoryRequest>,
+    /// `entry.response`, which carries the version's `ETag` and when it was
+    /// written (<https://hl7.org/fhir/R4B/http.html#history>).
+    pub(crate) response: Option<HistoryResponse>,
 }
 
 /// The `entry.request` elements a history entry carries.
@@ -91,22 +111,89 @@ pub(crate) struct HistoryRequest {
     pub(crate) method: Option<String>,
 }
 
-impl History {
-    /// The key a row is drawn under: the version, or the position when the
-    /// server sent none.
+/// The `entry.response` elements a history entry carries.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub(crate) struct HistoryResponse {
+    /// `response.etag`, the version this entry is.
+    pub(crate) etag: Option<String>,
+    /// `response.lastModified`, when the server wrote it.
+    #[serde(rename = "lastModified")]
+    pub(crate) last_modified: Option<String>,
+}
+
+/// One version of a resource, as a version list draws it.
+///
+/// It is the same shape whichever interaction produced it, so a root that
+/// answers the history `Bundle` and one that answers only the version read
+/// draw the same table.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) struct Version {
+    /// `meta.versionId`, which is also the row's key.
+    pub(crate) id: String,
+    /// `meta.lastUpdated`, or the entry's `response.lastModified`.
+    pub(crate) last_updated: Option<String>,
+    /// The interaction that made the version, where the answer states one.
+    pub(crate) method: Option<String>,
+    /// `meta.source`, the source system the content came from, where the
+    /// server states one (<https://hl7.org/fhir/R4B/resource.html#meta>).
     ///
-    /// A history row needs a stable, data-derived key, and `meta.versionId` is
-    /// that key wherever the server states one.
-    pub(crate) fn keys(&self) -> Vec<String> {
+    /// It identifies a system rather than a person: FHIR puts who changed a
+    /// resource in `Provenance` and `AuditEvent`, and says a server "SHOULD
+    /// generally leave this unchanged" on a write. A screen that drew it as
+    /// an author would be claiming more than the element carries.
+    pub(crate) source: Option<String>,
+    /// The resource as it stood at that version, as the server sent it.
+    pub(crate) resource: Option<Value>,
+}
+
+impl Version {
+    /// The version `resource` is, read out of the resource the server sent.
+    ///
+    /// `position` names the row when the server stated no `meta.versionId`, so
+    /// every row has an identifier for the pickers and the restore control to
+    /// carry.
+    pub(crate) fn of(resource: Option<Value>, position: usize) -> Self {
+        let read = resource
+            .as_ref()
+            .map(StoredResource::of)
+            .unwrap_or_default();
+        let meta = read.meta.unwrap_or_default();
+        Self {
+            id: meta
+                .version_id
+                .unwrap_or_else(|| format!("entry-{position}")),
+            last_updated: meta.last_updated,
+            method: None,
+            source: meta.source,
+            resource,
+        }
+    }
+}
+
+impl History {
+    /// The versions this `Bundle` carries, in the order the server sent them.
+    ///
+    /// The server sends them most recent first
+    /// (<https://hl7.org/fhir/R4B/http.html#history>), and each entry's
+    /// `request.method` names the interaction that made the version.
+    pub(crate) fn versions(&self) -> Vec<Version> {
         self.entry
             .iter()
             .enumerate()
-            .map(|(index, entry)| {
-                entry
-                    .resource
+            .map(|(position, entry)| {
+                let mut version = Version::of(entry.resource.clone(), position);
+                version.method = entry
+                    .request
                     .as_ref()
-                    .and_then(StoredResource::version_id)
-                    .map_or_else(|| format!("entry-{index}"), str::to_owned)
+                    .and_then(|request| request.method.clone());
+                if version.last_updated.is_none() {
+                    version.last_updated = entry
+                        .response
+                        .as_ref()
+                        .and_then(|response| response.last_modified.clone());
+                }
+                version
             })
             .collect()
     }
@@ -287,6 +374,7 @@ mod tests {
                 meta: Some(Meta {
                     version_id: Some(String::from("1")),
                     last_updated: None,
+                    source: None,
                 }),
                 ..StoredResource::default()
             }),
@@ -307,6 +395,7 @@ mod tests {
                 meta: Some(Meta {
                     version_id: Some(String::from("7")),
                     last_updated: None,
+                    source: None,
                 }),
                 ..StoredResource::default()
             }),
@@ -326,36 +415,54 @@ mod tests {
 
     #[test]
     fn a_history_row_is_keyed_by_its_version_and_never_by_its_position() {
-        let history = History {
-            total: Some(2),
-            entry: vec![
-                HistoryEntry {
-                    resource: Some(StoredResource {
-                        meta: Some(Meta {
-                            version_id: Some(String::from("2")),
-                            last_updated: None,
-                        }),
-                        ..StoredResource::default()
-                    }),
-                    request: Some(HistoryRequest {
-                        method: Some(String::from("PUT")),
-                    }),
-                },
-                HistoryEntry {
-                    resource: None,
-                    request: Some(HistoryRequest {
-                        method: Some(String::from("DELETE")),
-                    }),
-                },
-            ],
-        };
-        let keys = history.keys();
-        assert_eq!(keys.first().map(String::as_str), Some("2"));
+        let history: History = serde_json::from_str(
+            r#"{"resourceType":"Bundle","type":"history","total":2,"entry":[
+                 {"resource":{"resourceType":"CodeSystem","id":"colours",
+                   "meta":{"versionId":"2","lastUpdated":"2026-09-24T10:00:00Z","source":"https://sync.example/run/9"}},
+                  "request":{"method":"PUT","url":"CodeSystem/colours"},
+                  "response":{"status":"200","etag":"W/\"2\""}},
+                 {"request":{"method":"DELETE","url":"CodeSystem/colours"},
+                  "response":{"status":"204","lastModified":"2026-09-23T10:00:00Z"}}]}"#,
+        )
+        .expect("the server's own history Bundle parses");
+        let versions = history.versions();
+        let first = versions.first().expect("the bundle carries two entries");
+        assert_eq!(first.id, "2");
+        assert_eq!(first.method.as_deref(), Some("PUT"));
+        assert_eq!(first.source.as_deref(), Some("https://sync.example/run/9"));
+        assert_eq!(first.last_updated.as_deref(), Some("2026-09-24T10:00:00Z"));
+        let second = versions.get(1).expect("the bundle carries two entries");
         assert_eq!(
-            keys.get(1).map(String::as_str),
-            Some("entry-1"),
+            second.id, "entry-1",
             "a deleted version carries no resource, so the position is the only key left"
         );
+        assert_eq!(second.method.as_deref(), Some("DELETE"));
+        assert_eq!(
+            second.last_updated.as_deref(),
+            Some("2026-09-23T10:00:00Z"),
+            "an entry with no resource still says when the server wrote it"
+        );
+        assert!(second.resource.is_none());
+    }
+
+    #[test]
+    fn a_version_read_answers_the_same_row_a_history_entry_does() {
+        let resource: Value = serde_json::from_str(
+            r#"{"resourceType":"CodeSystem","id":"colours",
+                "meta":{"versionId":"3","lastUpdated":"2026-09-24T11:00:00Z"}}"#,
+        )
+        .expect("the server's own answer parses");
+        let version = Version::of(Some(resource), 0);
+        assert_eq!(version.id, "3");
+        assert_eq!(
+            version.last_updated.as_deref(),
+            Some("2026-09-24T11:00:00Z")
+        );
+        assert_eq!(
+            version.method, None,
+            "a version read states no interaction, and the screen says so"
+        );
+        assert_eq!(Version::of(None, 4).id, "entry-4");
     }
 
     #[test]

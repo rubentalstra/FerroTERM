@@ -15,6 +15,22 @@ fresh link reference.
 
 ### Added
 
+- **The viewer's editor bundle reads a resource's versions, compares two of
+  them, and restores one** (#637). Every authoring screen links to
+  `/ui/editor/history` for the resource it has open. The version list is read
+  with whichever interaction the server's `CapabilityStatement` declares, the
+  history interaction or the version read, and the screen says which it used
+  and when the server declares neither. Any two versions can be compared, as
+  the elements they disagree about rather than as text, with the two server-
+  assigned `meta` elements left out; the pair is in the address, so a
+  comparison is a link. **Restore this version** writes that version's whole
+  resource back with `If-Match` of the version the server holds now, so a
+  concurrent edit is refused with 412 and shown as one; it needs the write
+  scope for the resource type, and a reader sees the versions and no restore
+  control. Where a deployment puts the synchronisation service's admin listener
+  behind the server's own origin, the screen also lists what the newest run
+  found about the open resource; where nothing answers there, it shows nothing.
+
 - **The viewer's editor bundle composes a local `ValueSet`** (#635).
   `/ui/editor/compose` builds a `ValueSet.compose` out of value sets the server
   already publishes, own codes picked through the concept search, the filter
