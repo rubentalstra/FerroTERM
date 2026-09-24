@@ -263,6 +263,39 @@ impl Journey {
             .unwrap_or_else(|error| panic!("the browser could not open {address}: {error}"));
     }
 
+    /// The window the journey is driving now.
+    ///
+    /// # Errors
+    ///
+    /// Returns the WebDriver error when the browser does not answer.
+    pub async fn window(&self) -> WebDriverResult<WindowHandle> {
+        self.driver.window().await
+    }
+
+    /// Opens a second window in the same session and moves the journey into it.
+    ///
+    /// The windows share the session's cookies and nothing a page holds in
+    /// memory, so a second window is a second reader of the same deployment
+    /// (<https://www.w3.org/TR/webdriver2/#new-window>).
+    ///
+    /// # Errors
+    ///
+    /// Returns the WebDriver error when the browser refused the window.
+    pub async fn open_window(&self) -> WebDriverResult<WindowHandle> {
+        let opened = self.driver.new_window().await?;
+        self.driver.switch_to_window(opened.clone()).await?;
+        Ok(opened)
+    }
+
+    /// Moves the journey into `window`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the WebDriver error when the browser has no such window.
+    pub async fn switch_to(&self, window: &WindowHandle) -> WebDriverResult<()> {
+        self.driver.switch_to_window(window.clone()).await
+    }
+
     /// The first element matching `selector`, once the bundle has rendered it.
     ///
     /// The wait is the library's own poller over the element condition, so
@@ -378,6 +411,26 @@ impl Journey {
     /// Returns the WebDriver error when the browser does not answer.
     pub async fn focused(&self) -> WebDriverResult<String> {
         self.evaluate(FOCUSED).await
+    }
+
+    /// Waits until the keyboard is on the control `wanted` names.
+    ///
+    /// A screen that moves the focus itself does so a paint after the press
+    /// that asked for it, so a reading taken straight afterwards can still be
+    /// the control that was pressed.
+    pub async fn focus_becoming(&self, wanted: &str, what: &str) {
+        let deadline = Instant::now() + WAIT;
+        loop {
+            let on = self.focused().await.unwrap_or_default();
+            if on.contains(wanted) {
+                return;
+            }
+            if Instant::now() >= deadline {
+                let reason = format!("the keyboard is on `{on}`");
+                panic!("{}", self.failure(what, &reason).await);
+            }
+            tokio::time::sleep(POLL).await;
+        }
     }
 
     /// Types `text` wherever the keyboard is, with no pointer involved.
