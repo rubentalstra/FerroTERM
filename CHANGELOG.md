@@ -413,6 +413,21 @@ fresh link reference.
   keeps the record, leaves it out of what the operations resolve, answers
   from the core terminology, and logs a warning at startup naming the id.
 
+- **A persisted resource under a core or loaded `url` hides only its own
+  version** (#685). A `CodeSystem` persisted at
+  `http://hl7.org/fhir/administrative-gender` with `version` `local-1` used to
+  hide every version the FHIR core terminology defines for that `url`, so a
+  `$validate-code` naming `4.3.0` answered from the local resource. The layers
+  now resolve per `url` and `version` on R4, R4B, R5 and R6: a version the
+  persisted layer holds answers from it, every other version answers from the
+  core terminology or the loaded resources beneath, and the error for an
+  unknown version lists the versions of every layer. A request without a
+  version takes the default one registry holding every layer would pick: a
+  configured default, else the greatest version, so `local-1` becomes the
+  default over `4.3.0` and a persisted `1.0.0` leaves `4.3.0` the default
+  (<https://hl7.org/fhir/R4B/references.html#canonical>). A persisted
+  `ValueSet` over a core value set layers the same way.
+
 - **Two resources of one type can no longer carry one canonical** (#670). A
   create or update whose `url` and `version` another `CodeSystem`, `ValueSet`
   or `ConceptMap` of the same type already carries, persisted or loaded from

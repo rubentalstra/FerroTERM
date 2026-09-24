@@ -23,6 +23,7 @@ mod fixture;
 mod icd11;
 mod implicit_forms;
 mod labcodeset;
+mod layering;
 mod loinc;
 mod operations;
 mod registries;

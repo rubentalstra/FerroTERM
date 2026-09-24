@@ -1,5 +1,6 @@
 //! The loaded code system versions, by system URI, with the default-version rule.
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -56,6 +57,15 @@ struct System {
     default: Option<String>,
 }
 
+impl System {
+    /// The configured default, else the greatest version string.
+    fn default_version(&self) -> Option<&str> {
+        self.default
+            .as_deref()
+            .or_else(|| self.versions.keys().next_back().map(String::as_str))
+    }
+}
+
 /// A loaded supplement a request named as if it were a code system.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DormantSupplement {
@@ -70,8 +80,8 @@ pub struct Registry {
     /// The supplements loaded but dormant, by their own canonical, with the
     /// system canonical each supplements; a request applies them by name.
     supplements: BTreeMap<String, (String, crate::supplement::Supplement)>,
-    /// The registry under this one: a system this registry does not hold at
-    /// all resolves there. The FHIR core terminology of the served version is
+    /// The registry under this one: a system version this registry does not
+    /// hold resolves there. The FHIR core terminology of the served version is
     /// what a server puts there, so cloning this registry for one request
     /// costs the deployment's own systems alone.
     beneath: Option<Arc<Registry>>,
@@ -91,24 +101,54 @@ impl Registry {
 
     /// This registry with `beneath` under it.
     ///
-    /// A system URI this registry holds shadows the one beneath entirely, so a
-    /// deployment's own `CodeSystem` replaces the specification's rather than
-    /// merging versions with it; a URI this registry does not hold resolves
-    /// beneath. No FHIR version governs how a server layers its content: our
-    /// own design.
+    /// The layers resolve per system version: a version this registry holds
+    /// answers from it, every other version of the same URI still answers from
+    /// beneath, and the default is chosen over the versions of both as if they
+    /// were one registry ([`Self::default_version`]). A version-specific
+    /// canonical names one resource and a version-less one the latest
+    /// (<https://hl7.org/fhir/R4B/references.html#canonical>); how a server
+    /// layers its content is our own design, no FHIR version governs it.
     #[must_use]
     pub fn with_beneath(mut self, beneath: Arc<Self>) -> Self {
         self.beneath = Some(beneath);
         self
     }
 
-    /// The registry `url` resolves in: this one when it holds the system, the
-    /// one beneath when only it does.
-    fn holder(&self, url: &str) -> Option<&Self> {
-        if self.systems.contains_key(url) {
-            return Some(self);
+    /// Every layer's entry for `url`, this registry's first.
+    fn layers(&self, url: &str) -> Vec<&System> {
+        let mut found = Vec::new();
+        let mut layer = Some(self);
+        while let Some(current) = layer {
+            if let Some(system) = current.systems.get(url) {
+                found.push(system);
+            }
+            layer = current.beneath.as_deref();
         }
-        self.beneath.as_deref().and_then(|below| below.holder(url))
+        found
+    }
+
+    /// The versions of `url` across every layer, an upper layer's version
+    /// replacing the same version beneath, with the uppermost configured
+    /// default.
+    fn system(&self, url: &str) -> Option<Cow<'_, System>> {
+        let layers = self.layers(url);
+        match layers.as_slice() {
+            [] => None,
+            [only] => Some(Cow::Borrowed(*only)),
+            _ => {
+                let mut merged = System::default();
+                for layer in layers.iter().rev() {
+                    merged.versions.extend(
+                        layer
+                            .versions
+                            .iter()
+                            .map(|(version, provider)| (version.clone(), Arc::clone(provider))),
+                    );
+                }
+                merged.default = layers.iter().find_map(|layer| layer.default.clone());
+                Some(Cow::Owned(merged))
+            }
+        }
     }
 
     /// Adds a provider.
@@ -275,18 +315,28 @@ impl Registry {
     }
 
     /// The default version of a system: the configured one, else the greatest
-    /// version string.
+    /// version string, over the versions of every layer.
     ///
     /// The greatest-string rule is our own design for an unconfigured system;
     /// the FHIR terminology service only asks that the resolved version is
-    /// echoed (<https://hl7.org/fhir/R4B/terminology-service.html>).
+    /// echoed (<https://hl7.org/fhir/R4B/terminology-service.html>). Among
+    /// layers the uppermost configured default wins, else the greatest version
+    /// any layer holds, the rule one registry holding them all would apply.
     #[must_use]
     pub fn default_version(&self, url: &str) -> Option<&str> {
-        let system = self.holder(url)?.systems.get(url)?;
-        system
-            .default
-            .as_deref()
-            .or_else(|| system.versions.keys().next_back().map(String::as_str))
+        let layers = self.layers(url);
+        // NOTE: a version-less canonical names the latest (<https://hl7.org/fhir/R4B/references.html#canonical>);
+        // no spec governs the default among layers, our own design: one registry's rule over all of them.
+        layers
+            .iter()
+            .find_map(|layer| layer.default.as_deref())
+            .or_else(|| {
+                layers
+                    .iter()
+                    .filter_map(|layer| layer.versions.keys().next_back())
+                    .max()
+                    .map(String::as_str)
+            })
     }
 
     /// Resolves a system and optional version to a provider.
@@ -296,13 +346,13 @@ impl Registry {
     /// Returns [`ResolveError`] for an unknown system or version.
     pub fn resolve(&self, url: &str, version: Option<&str>) -> Result<Resolved, ResolveError> {
         let system = self
-            .holder(url)
-            .and_then(|holder| holder.systems.get(url))
+            .system(url)
             .ok_or_else(|| ResolveError::UnknownSystem(url.to_owned()))?;
         let (wanted, defaulted) = match version {
             Some(version) => (version, false),
             None => (
-                self.default_version(url)
+                system
+                    .default_version()
                     .ok_or_else(|| ResolveError::UnknownSystem(url.to_owned()))?,
                 true,
             ),
@@ -312,7 +362,7 @@ impl Registry {
         let provider =
             crate::versioned::select_version(system.versions.keys().map(String::as_str), wanted)
                 .and_then(|v| system.versions.get(v))
-                .or_else(|| Self::answering(system, wanted))
+                .or_else(|| Self::answering(&system, wanted))
                 .ok_or_else(|| ResolveError::UnknownVersion {
                     url: url.to_owned(),
                     version: wanted.to_owned(),
@@ -357,10 +407,7 @@ impl Registry {
             if !url.starts_with(canonical) {
                 continue;
             }
-            let Some(system) = self
-                .holder(canonical)
-                .and_then(|h| h.systems.get(canonical))
-            else {
+            let Some(system) = self.system(canonical) else {
                 continue;
             };
             let Ok(resolved) = self.resolve(canonical, None) else {
@@ -468,11 +515,18 @@ impl Registry {
         all.into_iter().collect()
     }
 
-    /// The registered versions of a system, sorted, with the provider.
+    /// The registered versions of a system across every layer, sorted, with
+    /// the provider; an upper layer's version replaces the same one beneath.
     pub fn versions(&self, url: &str) -> impl Iterator<Item = &Arc<dyn CodeSystemProvider>> {
-        self.holder(url)
-            .and_then(|holder| holder.systems.get(url))
-            .into_iter()
-            .flat_map(|system| system.versions.values())
+        let mut merged: BTreeMap<&str, &Arc<dyn CodeSystemProvider>> = BTreeMap::new();
+        for layer in self.layers(url).into_iter().rev() {
+            merged.extend(
+                layer
+                    .versions
+                    .iter()
+                    .map(|(version, provider)| (version.as_str(), provider)),
+            );
+        }
+        merged.into_values()
     }
 }
