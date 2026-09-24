@@ -5,8 +5,8 @@
 //! Every journey authors the resource it then reads the versions of, because
 //! the repository distributes no terminology content and the version list is
 //! only interesting once there is more than one version. Each one writes under
-//! its own canonical, so the journeys run beside each other against one
-//! server.
+//! its own canonical, unique to the run, so the journeys run beside each other
+//! against one server and a second run against the same store passes.
 //!
 //! The screen asks the synchronisation service's admin listener for the newest
 //! run, which nothing answers on this deployment. The browser logs that
@@ -20,6 +20,7 @@ use thirtyfour::stringmatch::StringMatch;
 use crate::harness::Journey;
 use crate::harness::SignedIn;
 use crate::harness::choose;
+use crate::harness::run_canonical;
 use crate::harness::session;
 use crate::harness::sign_in;
 use crate::harness::signed_in;
@@ -31,13 +32,19 @@ const AUTHORING_LINK: &str = "//a[normalize-space()='Edit a code system']";
 const HISTORY_LINK: &str = "//a[normalize-space()='History of this resource']";
 
 /// The canonical the restore journey authors under.
-const RESTORE_CANONICAL: &str = "https://terminology.example/e2e-history-restore";
+fn restore_canonical() -> String {
+    run_canonical("e2e-history-restore")
+}
 
 /// The canonical the read-only journey authors under.
-const READER_CANONICAL: &str = "https://terminology.example/e2e-history-reader";
+fn reader_canonical() -> String {
+    run_canonical("e2e-history-reader")
+}
 
 /// The canonical the keyboard journey authors under.
-const KEYBOARD_CANONICAL: &str = "https://terminology.example/e2e-history-keyboard";
+fn keyboard_canonical() -> String {
+    run_canonical("e2e-history-keyboard")
+}
 
 /// The canonical field of the code system form.
 const URL_FIELD: &str = "#editor-url";
@@ -228,7 +235,7 @@ async fn an_earlier_version_is_restored_and_the_resource_comes_back_as_it_was() 
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_authoring(&journey, &deployment, "restores-a-version").await;
-            author_and_save(&journey, RESTORE_CANONICAL).await?;
+            author_and_save(&journey, &restore_canonical()).await?;
             change_the_display_and_save(&journey).await?;
 
             open_history(&journey).await;
@@ -308,7 +315,7 @@ async fn a_reader_sees_the_versions_and_no_restore_control() {
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_authoring(&journey, &deployment, "reads-the-versions").await;
-            author_and_save(&journey, READER_CANONICAL).await?;
+            author_and_save(&journey, &reader_canonical()).await?;
             change_the_display_and_save(&journey).await?;
             open_history(&journey).await;
             journey
@@ -355,7 +362,7 @@ async fn the_comparison_runs_from_the_keyboard_alone() {
         .run_and_quit(|driver| async move {
             let journey = Journey::open(driver, &deployment.base, "/ui/editor").await;
             open_authoring(&journey, &deployment, "compares-from-the-keyboard").await;
-            author_and_save(&journey, KEYBOARD_CANONICAL).await?;
+            author_and_save(&journey, &keyboard_canonical()).await?;
             change_the_display_and_save(&journey).await?;
             open_history(&journey).await;
             journey

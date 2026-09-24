@@ -15,6 +15,8 @@ use thirtyfour::stringmatch::StringMatch;
 use crate::harness::Journey;
 use crate::harness::SignedIn;
 use crate::harness::choose;
+use crate::harness::run_canonical;
+use crate::harness::run_slug;
 use crate::harness::session;
 use crate::harness::sign_in;
 use crate::harness::signed_in;
@@ -22,19 +24,20 @@ use crate::harness::signed_in;
 /// The sidebar link into the code system authoring screen.
 const AUTHORING_LINK: &str = "//a[normalize-space()='Edit a code system']";
 
-/// The last segment of the canonical this journey authors under.
+/// The stem of the canonical this journey authors under.
+const STEM: &str = "e2e-concurrent-edit";
+
+/// The last segment of that canonical, unique to the run.
 ///
-/// Synthetic: the repository distributes no code system content. The run's
-/// process id is appended, because the second window opens the resource by
-/// its canonical and a copy left by an earlier run against the same server
-/// would answer first.
+/// The second window opens the resource by its canonical, and a copy left by
+/// an earlier run against the same server would answer first.
 fn slug() -> String {
-    format!("e2e-concurrent-edit-{}", std::process::id())
+    run_slug(STEM)
 }
 
 /// The canonical this journey authors under, and nothing else does.
 fn canonical() -> String {
-    format!("https://terminology.example/{}", slug())
+    run_canonical(STEM)
 }
 
 /// The overview's link to that code system's own screen.
