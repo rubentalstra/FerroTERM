@@ -309,40 +309,51 @@ fresh link reference.
   search** (#659). A `ConceptMap` authored on `/r5` states a target's direction
   as `relationship`, which R4B spells `equivalence`, so
   `GET /r4b/ConceptMap` used to answer `422` and list nothing at all. A written
-  resource is still never converted between FHIR releases: the R4B
-  `concept-map-equivalence` and R5 `concept-map-relationship` code sets are
-  disjoint and no core specification ships a map between them
+  resource is still never converted between FHIR releases. R4B states a
+  target's direction with `concept-map-equivalence` and R5 with
+  `concept-map-relationship`; `equal`, `subsumes`, `specializes`, `inexact` and
+  `unmatched` have no code in the R5 set
   (<https://hl7.org/fhir/R4B/valueset-concept-map-equivalence.html>,
-  <https://hl7.org/fhir/R5/valueset-concept-map-relationship.html>), so
-  converting would invent the semantics. Instead the search leaves the resource
-  out of its matches and adds one entry carrying an `OperationOutcome` with
-  `search.mode` of `outcome`, `severity` of `warning` and `code` of
-  `not-supported`, naming the resource and the version it was written as, which
-  is the shape a searchset has for reporting on the search itself
-  (<https://hl7.org/fhir/R4B/http.html#search>); `total` counts the matches.
-  The instance read of that resource on that base answers `406 Not Acceptable`
-  rather than `422`: the FHIR release is a media type parameter
-  (<https://hl7.org/fhir/R5/versioning.html>), so the resource has no
-  representation acceptable there
-  (<https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.7>), and the read
-  interaction itself names only `200`, `404` and `410`
-  (<https://hl7.org/fhir/R4B/http.html#read>).
+  <https://hl7.org/fhir/R5/valueset-concept-map-relationship.html>), and HL7's
+  R4-to-R5 transforms live in a cross-version implementation guide that is
+  informative and under development
+  (<https://hl7.org/fhir/extensions/conversions-ConceptMap.html>), so no core
+  specification states what a conversion should produce. Instead the search
+  leaves the resource out of its matches and adds one entry carrying an
+  `OperationOutcome` with `search.mode` of `outcome`, `severity` of `warning`
+  and `code` of `not-supported`, naming the resource and the version it was
+  written as, which is the shape a searchset has for reporting on the search
+  itself (<https://hl7.org/fhir/R4B/http.html#search>); `total` counts the
+  matches. The instance read of that resource on that base answers `404` rather
+  than `422`: serving one release per base is the strategy the specification
+  describes as one where "the same record has a different identity depending on
+  the version of FHIR in use" (<https://hl7.org/fhir/R5/versioning.html>), and
+  the read interaction names only `200`, `404` and `410`
+  (<https://hl7.org/fhir/R4B/http.html#read>). The `OperationOutcome` names the
+  release the resource does read as.
 
-- **`ValueSet/{id}/$expand` and `ConceptMap/{id}/$translate` answer on R4, R4B,
-  R5 and R6** (#663). Both operation definitions declare the instance level on
-  every served version, where the operation runs on the resource the URL names
+- **`ValueSet/{id}/$expand`, `ValueSet/{id}/$validate-code` and
+  `ConceptMap/{id}/$translate` answer on R4, R4B, R5 and R6** (#663). All three
+  operation definitions declare the instance level on every served version,
+  where the operation runs on the resource the URL names
   (<https://hl7.org/fhir/R4B/operations.html#request>), and a client that
   listed value sets and expanded one by id met a `404`. The instance form
   dispatches to the same engine call as the type-level form with the instance's
-  own canonical and version, for loaded and for persisted resources; a `url`,
-  a version, or an inline resource that contradicts the instance is a `400`.
+  own canonical and version, for loaded and for persisted resources, including
+  a resource that carries no `url` of its own; a `url`, a version, or an inline
+  resource that contradicts the instance is a `400`, and a canonical that
+  carries the instance's own version after a `|` is the instance.
 
-- **A searchset's `entry.fullUrl` is absolute** (#663). It is the absolute URL
-  of the resource (<https://hl7.org/fhir/R4B/bundle.html#bundle-unique>), built
-  from the base URL the deployment declares in `FERROTERM_BASE_URL` plus the
-  version's own root, or, when it declares none, from the authority the request
-  names. A deployment behind TLS declares the base URL, because a request
-  carries no scheme.
+- **A searchset's `entry.fullUrl` is absolute, and the bundle carries its
+  `self` link** (#663). `fullUrl` is the absolute URL of the resource
+  (<https://hl7.org/fhir/R4B/bundle.html#bundle-unique>), built from the base
+  URL the deployment declares in `FERROTERM_BASE_URL` plus the version's own
+  root, or, when it declares none, from the authority the request names. A
+  deployment behind TLS declares the base URL, because a request carries no
+  scheme. R5 and the R6 ballot require a `fullUrl` on every searchset entry
+  (`bdl-15`) and a `self` link on every searchset (`bdl-18`,
+  <https://hl7.org/fhir/R5/bundle.html>), so the outcome entry above carries a
+  `urn:uuid:` and every searchset now carries the URL it was searched at.
 
 - **A loaded `CodeSystem` supplement is read at its id and listed by search**
   (#663). A supplement is a `CodeSystem` resource the server holds

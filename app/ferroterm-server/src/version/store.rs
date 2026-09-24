@@ -302,27 +302,32 @@ pub(crate) fn unreadable(record: &Record, reading: &str, reason: &str) -> String
 
 /// `record` as a resource of the reading version, with its `meta`.
 ///
-/// A written resource is never converted between FHIR releases: the R4B
-/// `concept-map-equivalence` and R5 `concept-map-relationship` code sets are
-/// disjoint and no core specification ships a map between them, so a
-/// conversion would invent the semantics
+/// A written resource is never converted between FHIR releases. R4B states a
+/// target's direction with `concept-map-equivalence` and R5 with
+/// `concept-map-relationship`; `equal`, `subsumes`, `specializes`, `inexact`,
+/// and `unmatched` have no code in the R5 set
 /// (<https://hl7.org/fhir/R4B/valueset-concept-map-equivalence.html>,
-/// <https://hl7.org/fhir/R5/valueset-concept-map-relationship.html>).
+/// <https://hl7.org/fhir/R5/valueset-concept-map-relationship.html>), and
+/// HL7's R4-to-R5 transforms live in a cross-version implementation guide that
+/// is informative and under development
+/// (<https://hl7.org/fhir/extensions/conversions-ConceptMap.html>), so no core
+/// specification states what a conversion should produce.
 ///
 /// # Errors
 ///
 /// A resource stored in another FHIR version that carries an element this one
-/// does not define is a 406: the FHIR release is a media type parameter
-/// (`fhirVersion`, <https://hl7.org/fhir/R5/versioning.html>), so the resource
-/// has no representation acceptable on this base, which is what
-/// `406 Not Acceptable` reports
-/// (<https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.7>). The read
-/// interaction itself names only `200`, `404`, and `410`
-/// (<https://hl7.org/fhir/R4B/http.html#read>).
+/// does not define is a 404. Serving one release per base is the strategy the
+/// specification describes as one where "the same record has a different
+/// identity depending on the version of FHIR in use"
+/// (<https://hl7.org/fhir/R5/versioning.html>), and a read answers `404` for
+/// an identity a base does not hold
+/// (<https://hl7.org/fhir/R4B/http.html#read>, which names `200`, `404`, and
+/// `410` and no other status). The `OperationOutcome` names the release the
+/// resource does read as.
 pub(crate) fn rendered(request: &Request<'_>, record: &Record) -> Result<Object, Failure> {
     (request.surface.round_trip)(&record.resource).map_err(|reason| {
         Failure::new(
-            StatusCode::NOT_ACCEPTABLE,
+            StatusCode::NOT_FOUND,
             "not-supported",
             unreadable(record, request.surface.fhir_version, &reason),
         )
@@ -635,7 +640,8 @@ pub(crate) fn loaded_supplements(
 /// so a searchset needs the base the client used: the one the deployment
 /// declares, else the authority the request itself names. A deployment behind
 /// TLS or a path prefix declares `FERROTERM_BASE_URL`, because the request
-/// carries no scheme.
+/// carries no scheme and no `Forwarded` header is read here: no FHIR
+/// specification governs reverse-proxy trust, and this is our own design.
 pub(crate) fn base_of(
     state: &AppState,
     segment: &str,
@@ -884,7 +890,7 @@ macro_rules! store {
             //! implementation in `crate::version::store`.
 
             use axum::response::{IntoResponse, Response};
-            use fhir_types::$fhir::bundle::{Bundle, BundleEntry, BundleEntrySearch};
+            use fhir_types::$fhir::bundle::{Bundle, BundleEntry, BundleEntrySearch, BundleLink};
             use fhir_types::$fhir::codeable_concept::CodeableConcept;
             use fhir_types::$fhir::operation_outcome::{OperationOutcome, OperationOutcomeIssue};
             use fhir_types::$fhir::resource::Resource;
@@ -1002,9 +1008,17 @@ macro_rules! store {
             /// A searchset may carry an `OperationOutcome` about the search
             /// beside its matches, with no issue of `fatal` or `error`
             /// severity and `search.mode` of `outcome`
-            /// (<https://hl7.org/fhir/R4B/http.html#search>).
+            /// (<https://hl7.org/fhir/R4B/http.html#search>). R5 and the R6
+            /// ballot also define `Bundle.issues` for this content, and both
+            /// keep the entry form on that same page, so one shape serves
+            /// every served version.
             fn outcome(issue: Vec<OperationOutcomeIssue>) -> BundleEntry {
+                // NOTE: R5 `bdl-15` requires a `fullUrl` on every searchset entry, and a
+                // resource with no persistent identity takes a UUID
+                // (<https://hl7.org/fhir/R5/bundle.html>).
+                let full_url = format!("urn:uuid:{}", uuid::Uuid::new_v4());
                 BundleEntry {
+                    full_url: Some(full_url.into()),
                     resource: Some(Resource::OperationOutcome(Box::new(OperationOutcome {
                         issue,
                         ..Default::default()
@@ -1015,6 +1029,32 @@ macro_rules! store {
                     }),
                     ..Default::default()
                 }
+            }
+
+            /// The `self` link of a searchset: the URL the search was made at.
+            ///
+            /// R5 `bdl-18` requires it on every searchset
+            /// (<https://hl7.org/fhir/R5/bundle.html>), and `self` is the
+            /// relation the search page gives that link
+            /// (<https://hl7.org/fhir/R4B/http.html#paging>).
+            fn self_link(
+                base: Option<&String>,
+                resource_type: ResourceType,
+                uri: &http::Uri,
+            ) -> Vec<BundleLink> {
+                let Some(base) = base else {
+                    return Vec::new();
+                };
+                let path = format!("{base}/{}", resource_type.name());
+                let url = match uri.query().filter(|query| !query.is_empty()) {
+                    Some(query) => format!("{path}?{query}"),
+                    None => path,
+                };
+                vec![BundleLink {
+                    relation: "self".into(),
+                    url: url.into(),
+                    ..Default::default()
+                }]
             }
 
             /// One issue of that entry: the resource left out, and why.
@@ -1126,6 +1166,7 @@ macro_rules! store {
                 }
                 let bundle = Bundle {
                     r#type: "searchset".into(),
+                    link: self_link(base.as_ref(), resource_type, uri),
                     total: Some(total.into()),
                     entry,
                     ..Default::default()

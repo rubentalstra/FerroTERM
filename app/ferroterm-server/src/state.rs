@@ -995,15 +995,17 @@ impl AppState {
             .persisted
             .read()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // NOTE: `ValueSet.url` is 0..1, and the layer stores a resource without one
+        // under the empty canonical (<https://hl7.org/fhir/R4B/valueset.html>), so the
+        // id still names it.
         if let Some(record) = persisted
             .records
             .get(&(ResourceType::ValueSet, id.to_owned()))
-            && let Some(url) = &record.url
         {
-            return persisted
-                .layer
-                .value_sets
-                .resolve(url, record.version.as_deref());
+            return persisted.layer.value_sets.resolve(
+                record.url.as_deref().unwrap_or_default(),
+                record.version.as_deref(),
+            );
         }
         let (url, version) = self.value_set_instances.get(id)?;
         persisted.layer.value_sets.resolve(url, version.as_deref())
@@ -1044,15 +1046,17 @@ impl AppState {
             .persisted
             .read()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // NOTE: `ConceptMap.url` is 0..1, and the layer stores a resource without one
+        // under the empty canonical (<https://hl7.org/fhir/R4B/conceptmap.html>), so the
+        // id still names it.
         if let Some(record) = persisted
             .records
             .get(&(ResourceType::ConceptMap, id.to_owned()))
-            && let Some(url) = &record.url
         {
-            return persisted
-                .layer
-                .concept_maps
-                .resolve(url, record.version.as_deref());
+            return persisted.layer.concept_maps.resolve(
+                record.url.as_deref().unwrap_or_default(),
+                record.version.as_deref(),
+            );
         }
         let (url, version) = self.concept_map_instances.get(id)?;
         persisted

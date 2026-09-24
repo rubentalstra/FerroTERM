@@ -700,16 +700,13 @@ async fn a_resource_written_on_one_version_leaves_another_version_s_search_answe
             "{resource_type}: {projected}"
         );
 
-        // The read has one resource to answer with and no representation of it
-        // on this base: the FHIR release is a media type parameter
-        // (<https://hl7.org/fhir/R5/versioning.html>), so the refusal is a
-        // `406` (<https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.7>).
+        // Serving one release per base is the strategy where "the same record
+        // has a different identity depending on the version of FHIR in use"
+        // (<https://hl7.org/fhir/R5/versioning.html>), so the read of an
+        // identity this base does not hold is a `404`
+        // (<https://hl7.org/fhir/R4B/http.html#read>).
         let (status, refusal) = server.get(&format!("/r4b/{resource_type}/{id}")).await;
-        assert_eq!(
-            status,
-            StatusCode::NOT_ACCEPTABLE,
-            "{resource_type}: {refusal}"
-        );
+        assert_eq!(status, StatusCode::NOT_FOUND, "{resource_type}: {refusal}");
         assert_eq!(refusal["resourceType"], "OperationOutcome");
         assert_eq!(refusal["issue"][0]["code"], "not-supported");
         assert_eq!(

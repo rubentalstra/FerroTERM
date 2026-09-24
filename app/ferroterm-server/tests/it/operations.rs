@@ -550,3 +550,138 @@ async fn a_persisted_value_set_expands_at_its_instance_id() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["expansion"]["contains"][0]["code"], "cat", "{body}");
 }
+
+#[tokio::test]
+async fn a_persisted_value_set_without_a_canonical_expands_at_its_instance_id() {
+    // "If the operation is not called at the instance level, one of the in
+    // parameters url, context or valueSet must be provided"
+    // (<https://hl7.org/fhir/R4B/valueset-operation-expand.html>), so an
+    // instance needs no canonical of its own. `ValueSet.url` is 0..1.
+    let server = Server::start_persisting();
+    let set = json!({
+        "resourceType": "ValueSet",
+        "version": "1.0", "status": "active",
+        "compose": {"include": [{"system": ANIMALS, "concept": [{"code": "dog"}]}]}
+    });
+    let response = server.put("/r4b/ValueSet/local-only", &set).await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let (status, body) = server.get("/r4b/ValueSet/local-only").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let (status, body) = server.get("/r4b/ValueSet/local-only/$expand").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["expansion"]["contains"][0]["code"], "dog", "{body}");
+}
+
+#[tokio::test]
+async fn value_set_validate_code_answers_at_the_instance_level_on_every_version() {
+    let server = Server::start_with_resources();
+    let id = server.value_set_id_of(VS_PETS);
+    // Every served version's `OperationDefinition` declares
+    // `ValueSet/$validate-code` at the instance level
+    // (<https://hl7.org/fhir/R4B/valueset-operation-validate-code.html>).
+    for base in ["r4", "r4b", "r5", "r6"] {
+        let (status, body) = server
+            .get(&format!(
+                "/{base}/ValueSet/{id}/$validate-code?system={ANIMALS}&code=kitten"
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{base}: {body}");
+        assert_eq!(
+            parameter(&body, "result").map(|p| &p["valueBoolean"]),
+            Some(&json!(true)),
+            "{base}: {body}"
+        );
+
+        let (status, posted) = server
+            .post(
+                &format!("/{base}/ValueSet/{id}/$validate-code"),
+                &json!({"resourceType": "Parameters", "parameter": [
+                    {"name": "system", "valueUri": ANIMALS},
+                    {"name": "code", "valueCode": "kitten"}
+                ]}),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{base}: {posted}");
+        assert_eq!(
+            parameter(&posted, "result").map(|p| &p["valueBoolean"]),
+            Some(&json!(true)),
+            "{base}: {posted}"
+        );
+    }
+
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/ValueSet/{id}/$validate-code?url={VS_ALL}&system={ANIMALS}&code=kitten"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+}
+
+#[tokio::test]
+async fn an_instance_invocation_takes_the_instance_s_own_canonical_and_refuses_another() {
+    let server = Server::start_with_resources();
+    let id = server.value_set_id_of(VS_PETS);
+    let version = server
+        .state()
+        .value_set_instances()
+        .into_iter()
+        .find(|(_, url, _)| url == VS_PETS)
+        .and_then(|(_, _, version)| version)
+        .expect("the loaded value set states a version");
+
+    // A canonical carries its version after a `|`
+    // (<https://hl7.org/fhir/R4B/references.html#canonical>), so naming the
+    // instance's own canonical in full is the instance, not a contradiction.
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/ValueSet/{id}/$expand?url={VS_PETS}|{version}"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["url"], VS_PETS, "{body}");
+
+    let (status, body) = server
+        .get(&format!("/r4b/ValueSet/{id}/$expand?url={VS_PETS}|0.0"))
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+
+    let (status, body) = server
+        .get(&format!("/r4b/ValueSet/{id}/$expand?valueSetVersion=0.0"))
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "a version that is not the instance's: {body}"
+    );
+    assert_eq!(body["issue"][0]["code"], "invalid");
+
+    // The instance form runs on the resource the URL names
+    // (<https://hl7.org/fhir/R4B/operations.html#request>), so an inline one
+    // has nowhere to go.
+    let (status, body) = server
+        .post(
+            &format!("/r4b/ValueSet/{id}/$expand"),
+            &json!({"resourceType": "Parameters", "parameter": [
+                {"name": "valueSet", "resource": {
+                    "resourceType": "ValueSet", "status": "active",
+                    "compose": {"include": [{"system": ANIMALS}]}
+                }}
+            ]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+
+    let map = server.concept_map_id_of(CM_ANIMALS_COLOURS);
+    let (status, body) = server
+        .get(&format!(
+            "/r4b/ConceptMap/{map}/$translate?conceptMapVersion=0.0&system={ANIMALS}&code=cat"
+        ))
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert_eq!(body["issue"][0]["code"], "invalid");
+}

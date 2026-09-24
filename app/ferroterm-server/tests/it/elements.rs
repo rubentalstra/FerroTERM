@@ -145,8 +145,20 @@ async fn a_search_naming_no_elements_is_the_search_it_always_was() {
         .await;
     assert_eq!(status, StatusCode::OK, "{empty}");
     assert_eq!(
-        empty, whole,
+        empty["entry"], whole["entry"],
         "a client that named nothing asked for everything"
+    );
+    assert_eq!(empty["total"], whole["total"], "{empty}");
+    // The `self` link is the URL the search was made at
+    // (<https://hl7.org/fhir/R4B/http.html#paging>), so it carries each
+    // request's own query.
+    assert_eq!(
+        empty["link"][0]["url"],
+        "http://ferroterm.test/r5/CodeSystem?url=http://loinc.org&_elements="
+    );
+    assert_eq!(
+        whole["link"][0]["url"],
+        "http://ferroterm.test/r5/CodeSystem?url=http://loinc.org"
     );
 }
 

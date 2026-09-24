@@ -149,7 +149,9 @@ macro_rules! operations {
             /// The instance form runs the operation on that resource
             /// (<https://hl7.org/fhir/R4B/operations.html#request>), so an
             /// input naming a different canonical, a different version, or an
-            /// inline resource contradicts the invocation.
+            /// inline resource contradicts the invocation. No operation page
+            /// states what a server does with such an input, so refusing it
+            /// rather than silently preferring one side is our own design.
             fn binds(
                 bound: &Bound,
                 kind: &str,
@@ -159,7 +161,18 @@ macro_rules! operations {
                 inline_name: &str,
             ) -> Result<(), Failure> {
                 let invalid = |text: String| Failure::new(StatusCode::BAD_REQUEST, "invalid", text);
-                if let Some(url) = url
+                // NOTE: a canonical carries its version after a `|`
+                // (<https://hl7.org/fhir/R4B/references.html#canonical>), so the two
+                // halves are compared against the instance separately.
+                let (named, embedded) = match url {
+                    Some(url) => match url.split_once('|') {
+                        Some((url, version)) => (Some(url), Some(version)),
+                        None => (Some(url), None),
+                    },
+                    None => (None, None),
+                };
+                let version = version.or(embedded);
+                if let Some(url) = named
                     && url != bound.url
                 {
                     return Err(invalid(format!(
@@ -308,24 +321,40 @@ macro_rules! operations {
                 ))))
             }
 
-            fn run_value_set_validate_code(scope: &Scope, parameters: &Parameters) -> Handled {
+            fn run_value_set_validate_code(
+                scope: &Scope,
+                instance: Option<&Bound>,
+                parameters: &Parameters,
+            ) -> Handled {
                 Ok(Answer::Parameters(Box::new(value_set_validation(
-                    scope, parameters,
+                    scope, instance, parameters,
                 )?)))
             }
 
             /// One `ValueSet/$validate-code` as this version's `Parameters`.
             fn value_set_validation(
                 scope: &Scope,
+                instance: Option<&Bound>,
                 parameters: &Parameters,
             ) -> Result<Parameters, Failure> {
                 let request = ValueSetValidateCodeRequest::from_parameters(parameters)
                     .map_err(|e| parameters::parameters_failure(&e))?;
-                let validation = value_set_validate_code::validate_code(
-                    &scope.sources(),
-                    &map::value_set_validate_input(&request),
-                )
-                .map_err(|e| scope.refused(e))?;
+                let mut input = map::value_set_validate_input(&request);
+                if let Some(bound) = instance {
+                    binds(
+                        bound,
+                        "ValueSet",
+                        input.url.as_deref(),
+                        input.value_set_version.as_deref(),
+                        input.inline_value_set.is_some(),
+                        "valueSet",
+                    )?;
+                    input.url = Some(bound.url.clone());
+                    input.value_set_version.clone_from(&bound.version);
+                }
+                let validation =
+                    value_set_validate_code::validate_code(&scope.sources(), &input)
+                        .map_err(|e| scope.refused(e))?;
                 Ok(map::value_set_validation_parameters(&validation))
             }
 
@@ -375,7 +404,7 @@ macro_rules! operations {
                 let resource = match own(validation) {
                     Ok(own) => {
                         let merged = merge(shared, own);
-                        match value_set_validation(scope, &merged) {
+                        match value_set_validation(scope, None, &merged) {
                             Ok(answered) => Some(Resource::Parameters(Box::new(answered))),
                             Err(failure) => outcome_resource(&failure),
                         }
@@ -561,6 +590,11 @@ macro_rules! operations {
                         &VALUE_SET_VALIDATE_CODE,
                         At::Type,
                     ),
+                    ["ValueSet", id, "$validate-code"] => (
+                        Which::ValueSetValidateCode,
+                        &VALUE_SET_VALIDATE_CODE,
+                        At::ValueSet((*id).to_owned()),
+                    ),
                     ["ConceptMap", "$translate"] => {
                         (Which::Translate, &CONCEPT_MAP_TRANSLATE, At::Type)
                     }
@@ -624,7 +658,9 @@ macro_rules! operations {
                     Which::ValidateCode => run_validate_code(&scope, &invocation, &parameters),
                     Which::Subsumes => run_subsumes(&scope, &invocation, &parameters),
                     Which::Expand => run_expand(&scope, bound.as_ref(), &parameters),
-                    Which::ValueSetValidateCode => run_value_set_validate_code(&scope, &parameters),
+                    Which::ValueSetValidateCode => {
+                        run_value_set_validate_code(&scope, bound.as_ref(), &parameters)
+                    }
                     Which::Translate => run_translate(&scope, bound.as_ref(), &parameters),
                 }
             }
@@ -934,7 +970,7 @@ macro_rules! operations {
                 };
                 finish(
                     from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)), wire)
+                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, None, &p)), wire)
             }
 
             /// `POST /ValueSet/$validate-code`.
@@ -950,7 +986,50 @@ macro_rules! operations {
                 };
                 finish(
                     from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body)
-                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, &p)), wire)
+                        .and_then(|(scope, p)| run_value_set_validate_code(&scope, None, &p)), wire)
+            }
+
+            /// `GET /ValueSet/{id}/$validate-code`.
+            pub async fn value_set_validate_code_instance_get(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+            ) -> Response {
+                let (wire, query) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    value_set_instance(&state, &id).and_then(|bound| {
+                        from_query(&state, &VALUE_SET_VALIDATE_CODE, &headers, &query).and_then(
+                            |(scope, p)| run_value_set_validate_code(&scope, Some(&bound), &p),
+                        )
+                    }),
+                    wire,
+                )
+            }
+
+            /// `POST /ValueSet/{id}/$validate-code`.
+            pub async fn value_set_validate_code_instance_post(
+                State(state): State<Arc<AppState>>,
+                UrlPath(id): UrlPath<String>,
+                headers: HeaderMap,
+                Query(query): Query<Vec<(String, String)>>,
+                body: Bytes,
+            ) -> Response {
+                let (wire, _) = match negotiated(&headers, &query) {
+                    Ok(negotiated) => negotiated,
+                    Err(failure) => return failure.into_response(),
+                };
+                finish(
+                    value_set_instance(&state, &id).and_then(|bound| {
+                        from_body(&state, &VALUE_SET_VALIDATE_CODE, &headers, &body).and_then(
+                            |(scope, p)| run_value_set_validate_code(&scope, Some(&bound), &p),
+                        )
+                    }),
+                    wire,
+                )
             }
 
             /// `POST /ValueSet/$batch-validate-code` and `POST /CodeSystem/$batch-validate-code`.
