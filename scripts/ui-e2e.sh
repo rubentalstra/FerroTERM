@@ -23,24 +23,62 @@
 #
 # The signed-in journeys need a second deployment, because a server either
 # configures an identity provider or does not and the read-only journeys assert
-# the second shape. The managed mode starts that second server itself, beside a
-# stub identity provider over TLS whose certificate authority it installs in
-# both containers. In the manual mode you start the pair yourself and name them
-# with --signed-in-base-url and --issuer; without them those journeys skip and
-# say so. On a laptop that is:
+# the second shape. The managed mode puts every name the browser addresses on
+# one private container network, so every run renders the same addresses:
+#
+#   ferroterm         the server image with no issuer, on http port 8080. The
+#                     read-only journeys drive it.
+#   ferroterm-origin  the same image with an issuer: FERROTERM_OIDC_ISSUER,
+#                     FERROTERM_BASE_URL=https://ferroterm-smart, a viewer
+#                     client id, SSL_CERT_FILE naming the run's certificate
+#                     authority, and its resource store on a tmpfs.
+#   ferroterm-smart   Caddy, terminating TLS with a certificate that authority
+#                     signed, with ferroterm-origin:8080 as its upstream. The
+#                     browser signs in here, because PKCE needs a secure context.
+#   issuer            the stub identity provider (e2e/src/bin/stub_issuer.rs),
+#                     run on the host over TLS. It writes the authority and the
+#                     Caddy certificate. The second server and the browser both
+#                     reach it as issuer through --add-host issuer:host-gateway,
+#                     so both use one address and it runs without --public.
+#   the browser       the pinned Chromium, trusting the authority through a
+#                     Chromium policy. Its WebDriver port is published to the
+#                     host, which is where the journeys run.
+#
+# In the manual mode you start the pair yourself and name them with
+# --signed-in-base-url and --issuer; without them those journeys skip and say
+# so. The managed mode builds linux binaries for the image, so on macOS this is
+# the way to run the whole battery. With the servers on the host and the
+# browser in a container, the server reaches the issuer as localhost and the
+# browser reaches it as host.docker.internal, and --public is that split. With
+# Docker Desktop, from the repository root, after the two trunk builds below and
+# a `cargo build --release -p ferroterm-server --features ui` that names them in
+# FERROTERM_UI_BUNDLE and FERROTERM_UI_EDITOR_BUNDLE:
 #
 #   cargo run --manifest-path e2e/Cargo.toml --bin stub-issuer -- \
 #     --listen 0.0.0.0:18443 --issuer https://localhost:18443 \
 #     --public https://host.docker.internal:18443 \
 #     --name localhost --name host.docker.internal \
 #     --ca /tmp/e2e/ca.pem --serve-name ferroterm-smart --serve-dir /tmp/e2e/certs
+#   FERROTERM_LISTEN=0.0.0.0:8080 FERROTERM_UI=on \
+#     FERROTERM_CODESYSTEMS=e2e/fixtures/codesystems target/release/ferroterm
+#   FERROTERM_LISTEN=0.0.0.0:8081 FERROTERM_UI=on \
+#     FERROTERM_CODESYSTEMS=e2e/fixtures/codesystems \
+#     FERROTERM_BASE_URL=https://ferroterm-smart \
+#     FERROTERM_OIDC_ISSUER=https://localhost:18443 \
+#     FERROTERM_VIEWER_CLIENT_ID=ferroterm-viewer-e2e \
+#     FERROTERM_RESOURCES=/tmp/e2e/resources.redb SSL_CERT_FILE=/tmp/e2e/ca.pem \
+#     target/release/ferroterm
 #
-# then a server with FERROTERM_OIDC_ISSUER=https://localhost:18443,
-# FERROTERM_BASE_URL=https://ferroterm-smart, a viewer client id, and
-# SSL_CERT_FILE=/tmp/e2e/ca.pem; a Caddy container aliased ferroterm-smart
-# serving /tmp/e2e/certs in front of it; and the browser container started with
-# the authority as a Chromium policy. --issuer is the address the BROWSER
-# reaches the issuer at, which is the --public one.
+# then a network with Caddy aliased ferroterm-smart on it, serving
+# /tmp/e2e/certs/cert.pem and key.pem with host.docker.internal:8081 as its
+# upstream, and the browser container on the same network with the authority
+# as a Chromium policy, both started the way the managed mode below starts them.
+# Pass --base-url http://host.docker.internal:8080, --webdriver
+# http://127.0.0.1:4444, --signed-in-base-url https://ferroterm-smart and
+# --issuer https://host.docker.internal:18443, which is the --public address
+# because --issuer is where the BROWSER reaches the issuer. On a Linux host,
+# give both containers --add-host host.docker.internal:host-gateway, which
+# Docker Desktop provides by itself.
 #
 # With --base-url and --webdriver it builds and starts nothing and drives what
 # you already have. Both are required together, because a browser that cannot
@@ -65,8 +103,8 @@
 # --add-host ferroterm:host-gateway, then passing --base-url http://ferroterm:8080.
 #
 # The image stages linux binaries, so the managed mode needs a Linux host.
-# Anywhere else it says so and stops rather than reporting a lane it did not
-# run.
+# Anywhere else it says so, names the manual recipe above, and stops rather
+# than reporting a lane it did not run.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -241,9 +279,7 @@ if [[ -z "$base_url" ]]; then
   docker info >/dev/null 2>&1 ||
     { echo "ui-e2e: docker is installed but not running" >&2; exit 1; }
   if [[ "$(uname -s)" != Linux ]]; then
-    echo "ui-e2e: docker/Dockerfile stages linux binaries, which this host cannot build." >&2
-    echo "  Run this on Linux (the ui-e2e CI job does), or start a server and a" >&2
-    echo "  WebDriver yourself and pass --base-url and --webdriver." >&2
+    echo "ui-e2e: the managed mode builds linux binaries; on macOS run the manual recipe in this script's header." >&2
     exit 1
   fi
 

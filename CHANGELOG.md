@@ -395,6 +395,13 @@ fresh link reference.
 
 ### Fixed
 
+- **The browser journeys pass a second run against the same store** (#677).
+  Every write journey in `e2e/` authors a canonical carrying the run's process
+  id, through one helper in the harness, so a server whose resource store
+  persists between runs no longer answers with the copy an earlier run left.
+  The header of `scripts/ui-e2e.sh` states the whole managed topology and the
+  manual recipe for the signed-in pair, with the `--public` issuer split and
+  the Caddy upstream, and on macOS the managed mode points at that recipe.
 - **A persisted resource can no longer take the canonical of a FHIR core
   resource** (#679). A create or update whose `url` and `version` a
   `CodeSystem` or `ValueSet` of the FHIR core terminology carries, on any
