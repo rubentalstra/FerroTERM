@@ -58,9 +58,10 @@ fn record_unknown(holdings: &mut Holdings, ledger: &[Held], canonical: &str, ver
 
 /// The canonical and version identifier of every artifact under `index_root`.
 ///
-/// The canonical is the manifest's edition, which is the identity a feed names
-/// for an edition of a code system, and its system when the manifest carries
-/// no edition.
+/// An artifact is held under its manifest's system and, when the manifest
+/// carries one, under its edition too: a feed names an edition release either
+/// by the bare code system with the edition in the version URI (Ontoserver)
+/// or by the edition URI itself, and the replace rule must recognise both.
 fn built_artifacts(index_root: &Path) -> Vec<(String, String)> {
     let mut out = Vec::new();
     let entries = match std::fs::read_dir(index_root) {
@@ -75,9 +76,14 @@ fn built_artifacts(index_root: &Path) -> Vec<(String, String)> {
         let Some(value) = read_json(&manifest) else {
             continue;
         };
-        let canonical = field(&value, "edition").or_else(|| field(&value, "system"));
-        if let (Some(canonical), Some(version)) = (canonical, field(&value, "version")) {
-            out.push((canonical, version));
+        let Some(version) = field(&value, "version") else {
+            continue;
+        };
+        for canonical in [field(&value, "system"), field(&value, "edition")]
+            .into_iter()
+            .flatten()
+        {
+            out.push((canonical, version.clone()));
         }
     }
     out.sort();
@@ -158,6 +164,14 @@ mod tests {
             ),
             Some(jiff::Timestamp::MAX),
             "an artifact the service did not write is never replaced by it"
+        );
+        assert_eq!(
+            held.date_of(
+                "http://snomed.info/sct",
+                "http://snomed.info/sct/11000146104/version/20260930"
+            ),
+            Some(jiff::Timestamp::MAX),
+            "the same artifact is held under the bare code system, which is how Ontoserver names it"
         );
         Ok(())
     }

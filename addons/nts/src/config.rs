@@ -223,13 +223,27 @@ mod tests {
     fn the_subscription_names_its_systems_by_canonical() {
         let subscription = NtsConfig::default().subscription();
         assert!(
-            subscription.systems.admits(canonical::SNOMED_CT_NL),
+            subscription.systems.admits(canonical::SNOMED_CT_NL, ""),
             "the Netherlands edition is subscribed by default"
+        );
+        assert!(
+            subscription.systems.admits(
+                "http://snomed.info/sct",
+                "http://snomed.info/sct/11000146104/version/20260831"
+            ),
+            "the service identifies a release by the bare code system and the edition version URI"
+        );
+        assert!(
+            !subscription.systems.admits(
+                "http://snomed.info/sct",
+                "http://snomed.info/sct/900000000000207008/version/20260901"
+            ),
+            "a release of another edition is outside the subscription"
         );
         assert!(
             !subscription
                 .systems
-                .admits("http://example.invalid/CodeSystem/other"),
+                .admits("http://example.invalid/CodeSystem/other", ""),
             "a system the configuration does not name is outside the subscription"
         );
         assert!(
