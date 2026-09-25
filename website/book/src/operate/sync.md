@@ -245,13 +245,30 @@ authenticates before it can even see what is on offer.
 ### The account and the licences
 
 You need a personal account on the NTS. Nictiz issues it after you accept its
-terms, and each licensed system is unlocked per account: SNOMED CT (the Dutch
-edition), LOINC, the Nederlandse Labcodeset, UCUM, ICD-10, the NHG tables, and
-the zib value sets. An account without a licence for a system sees no entries
-for it, so check the licences you hold before you subscribe to a canonical.
+terms, and each licensed system is unlocked per account. A run with an account
+on 2026-09-25 (issue #602) showed how that scoping looks from the outside:
 
-The content stays licensed by its publisher. FerroTERM distributes none of it,
-and a deployment brings what it is licensed for.
+- The syndication feed listed 23 entries, all of them Ontoserver binary
+  indexes of the SNOMED CT Netherlands edition (releases 2023-03-31 through
+  2026-08-31, 1.4 to 1.6 GB each), each marked `onto:permission` `snomed.read`.
+  It carried no RF2 archive and no FHIR resource or package, so the feed
+  alone gives the sync nothing it can build or serve. The FHIR content lives
+  behind the FHIR API of the same service (1,024 `CodeSystem`, 1,593
+  `ValueSet`, and 45 `ConceptMap` resources for that account), which the
+  add-on does not read yet.
+- The feed identifies SNOMED CT as `http://snomed.info/sct` and carries the
+  edition in the version URI (`http://snomed.info/sct/11000146104/version/20260831`).
+- A system the account holds no licence for is hidden, not absent: `$lookup`
+  on LOINC or the NHG tables answers `404` naming the current version
+  (`http://loinc.org|2.83`, `http://hl7.org/fhir/sid/icpc-1-nl|12`), and a
+  search by that URL returns zero resources. SNOMED CT, ICD-10-NL, the
+  Labcodeset LOINC supplement and its three maps, UCUM, and the zib value sets
+  were visible to an account that had accepted the SNOMED CT terms only.
+
+Ask Nictiz for each licence you need and check what your account sees before
+you subscribe to a canonical. The content stays licensed by its publisher.
+FerroTERM distributes none of it, and a deployment brings what it is licensed
+for.
 
 ### Credentials
 
@@ -270,13 +287,17 @@ The file form takes the same four field names in a JSON object, and the
 configuration points at it with `{"from": "file", "path": "/run/secrets/nts.json"}`.
 
 The add-on reads the token endpoint from
-`https://terminologieserver.nl/fhir/.well-known/smart-configuration` and logs
-in with the grant Nictiz documents: the password grant with `cli_client`. If
-you configured a client secret, the client-credentials grant is tried first and
-falls back to the password grant when the realm refuses it. The access token is
-refreshed a minute before it expires, and a refused refresh, which is what a
-spent 24 hour refresh token gives, logs in again from the stored credentials.
-An unattended run on any day needs no person.
+`https://terminologieserver.nl/fhir/.well-known/smart-configuration`, which
+redirects (`301`) to the Keycloak discovery document at
+`https://terminologieserver.nl/authorisation/auth/realms/nictiz/.well-known/openid-configuration`,
+and logs in with the grant Nictiz documents: the password grant with
+`cli_client`. If you configured a client secret, the client-credentials grant
+is tried first and falls back to the password grant when the realm refuses it.
+The realm issues an access token and a refresh token that both live 24 hours
+(`expires_in` and `refresh_expires_in` of 86400, measured 2026-09-25). The
+access token is refreshed a minute before it expires, and a refused refresh
+logs in again from the stored credentials. An unattended run on any day needs
+no person.
 
 ### The first run
 
@@ -300,22 +321,33 @@ run made available.
 3. Subscribe by canonical identifier. The defaults are the SNOMED CT
    Netherlands edition (`http://snomed.info/sct/11000146104`), LOINC
    (`http://loinc.org`), UCUM (`http://unitsofmeasure.org`), and ICD-10
-   (`http://hl7.org/fhir/sid/icd-10`). Name the others once you see the
-   canonicals the feed publishes for them.
+   (`http://hl7.org/fhir/sid/icd-10`). The service's own canonicals for the
+   Dutch content are ICD-10-NL (`http://hl7.org/fhir/sid/icd-10-nl`), the
+   Labcodeset (`http://labterminologie.nl/cs/labconcepts`, a LOINC
+   supplement, with its maps under `http://labterminologie.nl/cm/`), NHG-Tabel
+   24 (`http://hl7.org/fhir/sid/icpc-1-nl`), the other NHG tables
+   (`https://referentiemodel.nhg.org/tabellen/nhg-tabel-NN-slug`), and the zib
+   value sets (`http://decor.nictiz.nl/fhir/ValueSet/{oid}--{timestamp}`).
 4. Run once and read the run record before you activate anything. It lists
    every entry the feed offered, what was taken, and the reason for each entry
    left behind: a system you did not subscribe to, a release you already serve,
    or a system the service offers only as Ontoserver's binary index, which is
    an internal package format and is reported as not syndicable.
-5. Check the corrections. One Nictiz map publishes `experimental` as the string
-   `"true"`, and the add-on writes the boolean FHIR declares before the file is
-   served. Every correction is listed with the element it changed; a file that
-   needs none lands byte-identical.
+5. Check the corrections. The freely published NHG ICPC-1 to SNOMED CT map
+   file writes `experimental` as the string `"true"`, and the add-on writes the
+   boolean FHIR declares before the file is served. The service itself serves
+   `experimental` as a boolean on every resource it lists (checked over 2,662
+   summaries on 2026-09-25), so the correction concerns files taken from
+   elsewhere. Every correction is listed with the element it changed; a file
+   that needs none lands byte-identical.
 
 ### What is verified so far
 
-The add-on is verified against fixtures only. Nobody has run it against the
-live feed, because that needs an account, so the entry formats each system
-arrives in, RF2 or a FHIR resource or the binary index, are not yet known.
-Issue #602 stays open until `scripts/live/sync-e2e.sh` has run once with a
-real account and its record is attached there.
+The feed hop ran against the live service on 2026-09-25 with a personal
+account (the record is on issue #602): discovery, the password grant, the
+token lifetimes, and the listing are confirmed as described above. What the
+run also showed is that the feed carries only the SNOMED CT binary index, so
+the RF2 lane takes nothing from the NTS until Nictiz publishes RF2 there, and
+the FHIR lane needs the service's FHIR API rather than the feed. Both follow-ups
+are tracked as sub-issues of the sync program. The end-to-end run of
+`scripts/live/sync-e2e.sh` is therefore not yet meaningful and has not run.
