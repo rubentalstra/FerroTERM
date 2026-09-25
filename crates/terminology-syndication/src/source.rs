@@ -14,7 +14,9 @@
 //! [`Source::download_auth`], and takes [`Source::list`] and
 //! [`Source::fetch`] as they are. It overrides either of those two only when
 //! its service departs from the dialect, and says so in its own
-//! documentation. The trait is object-safe, so a caller holds every configured
+//! documentation. An add-on whose service keeps FHIR resources behind its
+//! FHIR API rather than in the feed answers [`Source::fhir_api_url`], and
+//! takes [`Source::list_api`] and [`Source::fetch_api`] as they are. The trait is object-safe, so a caller holds every configured
 //! add-on in one `Vec<Box<dyn Source>>`.
 //!
 //! An add-on obtains and refreshes its credentials inside
@@ -135,6 +137,21 @@ pub enum SourceError {
     /// The content item could not be fetched.
     #[error("a content item could not be fetched")]
     Download(#[from] DownloadError),
+    /// A page of the FHIR API listing is not a JSON bundle.
+    #[error("the FHIR API page at {url} could not be read")]
+    ApiParse {
+        /// The address the page came from.
+        url: String,
+        /// Why the page could not be read.
+        #[source]
+        source: serde_json::Error,
+    },
+    /// The source offers no FHIR API to list.
+    #[error("{source_name} offers no FHIR API")]
+    NoFhirApi {
+        /// The source that was asked.
+        source_name: String,
+    },
 }
 
 /// One syndication service an add-on speaks to.
@@ -205,6 +222,57 @@ pub trait Source: fmt::Debug + Send + Sync {
                     source,
                 })?;
             crate::parse::feed(&body).map_err(|source| SourceError::Parse { url, source })
+        })
+    }
+
+    /// The FHIR endpoint whose resources the source lists beside its feed.
+    ///
+    /// `None`, the default, is a source whose feed carries everything.
+    fn fhir_api_url(&self) -> Option<&str> {
+        None
+    }
+
+    /// Lists the source's FHIR API as a feed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SourceError::NoFhirApi`] when the source offers no FHIR API,
+    /// [`SourceError::Authentication`] when the listing cannot be authorized,
+    /// and the errors of [`crate::fhir_api::list`] when a page cannot be read.
+    fn list_api(&self) -> BoxFuture<'_, Result<Feed, SourceError>> {
+        Box::pin(async move {
+            let Some(base_url) = self.fhir_api_url() else {
+                return Err(SourceError::NoFhirApi {
+                    source_name: self.name().to_owned(),
+                });
+            };
+            let authorization = self.listing_auth().await?;
+            crate::fhir_api::list(self.client(), base_url, &authorization).await
+        })
+    }
+
+    /// Fetches one resource the FHIR API lists to `destination`.
+    ///
+    /// The API advertises no digest, so the digest of what arrived is computed
+    /// and answered rather than verified.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SourceError::Authentication`] when the download cannot be
+    /// authorized and [`SourceError::Download`] when the bytes do not arrive.
+    fn fetch_api<'a>(
+        &'a self,
+        link: &'a ContentLink,
+        destination: &'a Path,
+    ) -> BoxFuture<'a, Result<Fetched, SourceError>> {
+        Box::pin(async move {
+            let authorization = self.download_auth().await?;
+            let request = authorization.apply(
+                self.client()
+                    .get(&link.href)
+                    .header(reqwest::header::ACCEPT, crate::fhir_api::FHIR_JSON),
+            );
+            Ok(crate::download::to_file_unverified(request, destination).await?)
         })
     }
 

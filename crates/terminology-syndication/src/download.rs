@@ -53,14 +53,14 @@ pub enum DownloadError {
     },
 }
 
-/// A content item that arrived and verified.
+/// A content item that arrived, with its digest.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Fetched {
     /// Where the bytes were written.
     pub path: PathBuf,
     /// How many bytes arrived.
     pub bytes: u64,
-    /// The digest that was verified.
+    /// The digest that was verified, or computed when none was advertised.
     pub checksum: Checksum,
 }
 
@@ -83,6 +83,33 @@ pub async fn to_file(
     destination: &Path,
     expected: &Checksum,
 ) -> Result<Fetched, DownloadError> {
+    write(request, destination, Some(expected)).await
+}
+
+/// Streams `request` to `destination` and answers the SHA-256 of what arrived.
+///
+/// This is for a source that advertises no digest, such as a FHIR API that
+/// serves a resource by its identifier. The digest is computed rather than
+/// verified, so the caller can still record what it took.
+///
+/// # Errors
+///
+/// Returns [`DownloadError::Request`] when the request fails,
+/// [`DownloadError::Status`] when the server answers with a status that is not
+/// a success, and [`DownloadError::Write`] when the file cannot be written or
+/// moved.
+pub async fn to_file_unverified(
+    request: reqwest::RequestBuilder,
+    destination: &Path,
+) -> Result<Fetched, DownloadError> {
+    write(request, destination, None).await
+}
+
+async fn write(
+    request: reqwest::RequestBuilder,
+    destination: &Path,
+    expected: Option<&Checksum>,
+) -> Result<Fetched, DownloadError> {
     let url = request_url(&request);
     let mut response = request
         .send()
@@ -97,7 +124,8 @@ pub async fn to_file(
     }
 
     let partial = partial_path(destination);
-    let mut digest = Digest::for_checksum(expected);
+    let mut digest =
+        expected.map_or_else(|| Digest::Sha256(sha2::Sha256::new()), Digest::for_checksum);
     let mut file =
         tokio::fs::File::create(&partial)
             .await
@@ -120,14 +148,18 @@ pub async fn to_file(
     };
 
     let computed = digest.finish();
-    if !expected.matches(&computed) {
-        discard(&partial).await;
-        return Err(DownloadError::ChecksumMismatch {
-            url,
-            expected: expected.clone(),
-            computed,
-        });
-    }
+    let checksum = match expected {
+        Some(expected) if !expected.matches(&computed) => {
+            discard(&partial).await;
+            return Err(DownloadError::ChecksumMismatch {
+                url,
+                expected: expected.clone(),
+                computed,
+            });
+        }
+        Some(expected) => expected.clone(),
+        None => Checksum::Sha256(computed),
+    };
     tokio::fs::rename(&partial, destination)
         .await
         .map_err(|source| DownloadError::Write {
@@ -137,7 +169,7 @@ pub async fn to_file(
     Ok(Fetched {
         path: destination.to_path_buf(),
         bytes,
-        checksum: expected.clone(),
+        checksum,
     })
 }
 

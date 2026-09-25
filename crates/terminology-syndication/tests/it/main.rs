@@ -14,6 +14,7 @@
 mod corpus;
 mod digest;
 mod download;
+mod fhir_api;
 mod fixtures;
 mod parse;
 mod reference;

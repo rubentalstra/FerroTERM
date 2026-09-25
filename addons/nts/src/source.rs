@@ -84,6 +84,7 @@ pub struct FetchedResource {
 pub struct NtsSource {
     name: String,
     feed_url: String,
+    fhir_api_url: Option<String>,
     client: reqwest::Client,
     authenticator: Authenticator,
     subscription: Subscription,
@@ -129,6 +130,7 @@ impl NtsSource {
         Self {
             name: config.name.clone(),
             feed_url: config.feed_url(),
+            fhir_api_url: config.fhir_api_url(),
             client,
             authenticator,
             subscription: config.subscription(),
@@ -240,6 +242,10 @@ impl Source for NtsSource {
 
     fn feed_url(&self) -> &str {
         &self.feed_url
+    }
+
+    fn fhir_api_url(&self) -> Option<&str> {
+        self.fhir_api_url.as_deref()
     }
 
     fn yields(&self) -> &[CategoryTerm] {

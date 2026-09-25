@@ -1,8 +1,9 @@
 //! One run, end to end, and the service that performs it.
 //!
-//! A run lists every configured source, decides what the deployment does not
-//! hold yet, fetches it with its digest verified, and puts it through one of
-//! two lanes: an RF2 archive is built into a staging directory, a FHIR
+//! A run lists every configured source, its feed and, when it has one, its
+//! FHIR API, decides what the deployment does not hold yet, fetches it (with
+//! its digest verified when the feed advertised one), and puts it through one
+//! of two lanes: an RF2 archive is built into a staging directory, a FHIR
 //! resource is corrected and written as a staged file. In `auto` activation
 //! the run then renames what it staged into place and asks the server to
 //! reload; in `manual` activation it stops at staging and waits for
@@ -25,7 +26,8 @@ use crate::clock::Clock;
 use crate::config::{Activation, Config};
 use crate::metrics::Metrics;
 use crate::record::{
-    Activated, RecordStore, ReloadReply, RunRecord, SkippedEntry, SourceRun, TakenEntry, Trigger,
+    Activated, Origin, RecordStore, ReloadReply, RunRecord, SkippedEntry, SourceRun, TakenEntry,
+    Trigger,
 };
 use crate::reload::{AdminClient, ReloadError};
 use crate::schedule::{Plan, ScheduleError};
@@ -250,6 +252,7 @@ impl Service {
         let held = self.holdings(state).await;
         for source in &self.sources {
             let mut run = SourceRun::new(source.source().name(), source.source().feed_url());
+            let mut listed = Vec::new();
             match source.source().list().await {
                 Err(error) => {
                     let text = reason(&error);
@@ -263,24 +266,84 @@ impl Service {
                 }
                 Ok(feed) => {
                     run.entries_seen = feed.entries.len();
-                    let selection = source.select(&feed, &held);
-                    for skipped in selection.skipped {
-                        run.skipped.push(SkippedEntry {
-                            entry_id: skipped.entry_id,
-                            title: skipped.title,
-                            reason: skipped.reason.to_string(),
-                        });
+                    self.stage_listed(source, &feed, Origin::Feed, &held, state, &mut run, record)
+                        .await;
+                    listed.push(feed);
+                }
+            }
+            if let Some(api_url) = source.source().fhir_api_url() {
+                run.fhir_api_url = Some(api_url.to_owned());
+                match source.source().list_api().await {
+                    Err(error) => {
+                        let text = reason(&error);
+                        tracing::error!(
+                            source = source.source().name(),
+                            error = text,
+                            "the FHIR API did not list"
+                        );
+                        run.errors.push(text.clone());
+                        record.fail(text);
                     }
-                    for taken in selection.taken {
-                        let entry = self.take(source, &taken, state).await;
-                        if let Some(error) = entry.error.clone() {
-                            record.fail(error);
-                        }
-                        run.taken.push(entry);
+                    Ok(feed) => {
+                        run.api_entries_seen = feed.entries.len();
+                        self.stage_listed(
+                            source,
+                            &feed,
+                            Origin::FhirApi,
+                            &held,
+                            state,
+                            &mut run,
+                            record,
+                        )
+                        .await;
+                        listed.push(feed);
                     }
                 }
             }
+            if run.errors.is_empty() {
+                run.not_visible = source.unseen(&listed.iter().collect::<Vec<_>>());
+                for canonical in &run.not_visible {
+                    tracing::warn!(
+                        source = source.source().name(),
+                        canonical,
+                        "a subscribed system was not visible to the account"
+                    );
+                }
+            }
             record.sources.push(run);
+        }
+    }
+
+    /// Selects from one listing and stages what it takes.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one listing, its origin, and the three things a run writes into"
+    )]
+    async fn stage_listed(
+        &self,
+        source: &ConfiguredSource,
+        feed: &terminology_syndication::model::Feed,
+        origin: Origin,
+        held: &Holdings,
+        state: &mut State,
+        run: &mut SourceRun,
+        record: &mut RunRecord,
+    ) {
+        let selection = source.select(feed, held);
+        for skipped in selection.skipped {
+            run.skipped.push(SkippedEntry {
+                entry_id: skipped.entry_id,
+                title: skipped.title,
+                origin,
+                reason: skipped.reason.to_string(),
+            });
+        }
+        for taken in selection.taken {
+            let entry = self.take(source, &taken, origin, state).await;
+            if let Some(error) = entry.error.clone() {
+                record.fail(error);
+            }
+            run.taken.push(entry);
         }
     }
 
@@ -312,6 +375,7 @@ impl Service {
         &self,
         source: &ConfiguredSource,
         taken: &Taken,
+        origin: Origin,
         state: &mut State,
     ) -> TakenEntry {
         let term = taken.entry.term();
@@ -337,6 +401,7 @@ impl Service {
         let mut entry = TakenEntry {
             entry_id: taken.entry.id.clone(),
             title: taken.entry.title.clone(),
+            origin,
             canonical: canonical.clone(),
             version: version.clone(),
             category: term.to_string(),
@@ -359,7 +424,11 @@ impl Service {
             return failed(entry, format!("cannot use the download directory: {error}"));
         }
         let started = std::time::Instant::now();
-        let fetched = match source.source().fetch(&taken.link, &download).await {
+        let fetched = match origin {
+            Origin::Feed => source.source().fetch(&taken.link, &download).await,
+            Origin::FhirApi => source.source().fetch_api(&taken.link, &download).await,
+        };
+        let fetched = match fetched {
             Ok(fetched) => fetched,
             Err(error) => return failed(entry, reason(&error)),
         };

@@ -2,19 +2,24 @@
 
 A national terminology service publishes its releases in an Atom syndication
 feed: one entry per downloadable item, with the canonical identifier, the
-version, the date, and a digest. The FerroTERM sync service reads such a feed
-on a schedule, takes what you subscribed to, builds or stages it, and asks the
-server to reload. It runs beside the server and never inside it, and it moves
-content in one direction only.
+version, the date, and a digest. Some services keep their FHIR resources
+behind their FHIR API instead, and the sync lists that API as if it were a
+second feed. The FerroTERM sync service reads both on a schedule, takes what
+you subscribed to, builds or stages it, and asks the server to reload. It runs
+beside the server and never inside it, and it moves content in one direction
+only.
 
 ## What one run does
 
-1. It reads each configured feed and compares what it offers with what you
-   already serve: the releases under your index root, the resources in your
-   managed directory, and the ledger of what the service itself put there.
+1. It reads each configured feed, and the FHIR API of a source that has one
+   (a search per `CodeSystem`, `ValueSet`, and `ConceptMap`, paged to the
+   end), and compares what they offer with what you already serve: the
+   releases under your index root, the resources in your managed directory,
+   and the ledger of what the service itself put there.
 2. It takes the entries you subscribed to that you do not hold yet, streams
    each one to the staging directory, and refuses any whose digest does not
-   match what the feed advertised.
+   match what the feed advertised. A resource read from a FHIR API carries no
+   advertised digest; the run records the digest of what arrived instead.
 3. An RF2 archive goes through `ferroterm-build` into a staging directory and
    is renamed into the index root as a new release beside the previous one. A
    FHIR resource is written as a file in the managed resource directory,
@@ -104,6 +109,10 @@ kind = "nts"
 [source.config]
 systems = ["http://snomed.info/sct/11000146104", "http://loinc.org"]
 ```
+
+An add-on whose service keeps resources behind its FHIR API lists that API by
+default; the NTS block takes `fhir_api = false` to keep a run to the feed and
+`fhir_api_url` to point at another endpoint.
 
 The file carries no credential. A source add-on reads its credentials from a
 file or from the environment, so this file is safe to commit and safe to show.
@@ -217,11 +226,15 @@ One JSON file per run under `records`, named by the run identifier, which sorts
 by time. It carries:
 
 - the trigger, the start and end, the duration, and the outcome;
-- per source: the feed address, how many entries it offered, what was taken
-  (with the bytes, the download time, the build time, and the corrections that
-  were applied), and what was left behind with the reason for each one, such as
-  a system you did not subscribe to, a release you already serve, a delta
-  rather than a snapshot, or Ontoserver's binary index;
+- per source: the feed address, how many entries it offered, the FHIR API
+  address and how many resources it listed when the source has one, what was
+  taken (with its origin, feed or FHIR API, the bytes, the download time, the
+  build time, and the corrections that were applied), what was left behind
+  with the reason for each one, such as a system you did not subscribe to, a
+  release you already serve, a delta rather than a snapshot, Ontoserver's
+  binary index, or a `CodeSystem` whose content is `not-present`, and the
+  subscribed canonicals no listing carried at all, which means the account
+  could not see them and never that the service lacks them;
 - the activation: the mode, what reached the server, what is still staged, what
   the server answered to each reload, and whether the run was rolled back;
 - the revalidation: how many locally authored resources were read and how many
@@ -255,7 +268,8 @@ on 2026-09-25 (issue #602) showed how that scoping looks from the outside:
   alone gives the sync nothing it can build or serve. The FHIR content lives
   behind the FHIR API of the same service (1,024 `CodeSystem`, 1,593
   `ValueSet`, and 45 `ConceptMap` resources for that account), which the
-  add-on does not read yet.
+  add-on lists beside the feed. The SNOMED CT `CodeSystem` resources there
+  carry `content` `not-present` and are reported, never served.
 - The feed identifies SNOMED CT as `http://snomed.info/sct` and carries the
   edition in the version URI (`http://snomed.info/sct/11000146104/version/20260831`).
 - A system the account holds no licence for is hidden, not absent: `$lookup`
@@ -345,9 +359,7 @@ run made available.
 
 The feed hop ran against the live service on 2026-09-25 with a personal
 account (the record is on issue #602): discovery, the password grant, the
-token lifetimes, and the listing are confirmed as described above. What the
-run also showed is that the feed carries only the SNOMED CT binary index, so
-the RF2 lane takes nothing from the NTS until Nictiz publishes RF2 there, and
-the FHIR lane needs the service's FHIR API rather than the feed. Both follow-ups
-are tracked as sub-issues of the sync program. The end-to-end run of
-`scripts/live/sync-e2e.sh` is therefore not yet meaningful and has not run.
+token lifetimes, and the listing are confirmed as described above. The run
+also showed that the feed carries only the SNOMED CT binary index, so the RF2
+lane takes nothing from the NTS until Nictiz publishes RF2 there; the FHIR
+resources are taken through the API lane instead.

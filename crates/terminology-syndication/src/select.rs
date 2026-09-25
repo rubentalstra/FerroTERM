@@ -86,6 +86,33 @@ impl Subscription {
     }
 }
 
+/// The listed canonicals that no entry of any of `feeds` carries.
+///
+/// A service that scopes its listing to the account's licences shows an
+/// unlicensed system as absent, so a subscribed canonical that appears in no
+/// listing is reported by name: the run record then says the system was not
+/// visible to the account, which is a licence question and never proof that
+/// the service lacks it. A subscription to every system lists nothing.
+#[must_use]
+pub fn unseen(subscription: &Subscription, feeds: &[&Feed]) -> Vec<String> {
+    let Systems::Listed(listed) = &subscription.systems else {
+        return Vec::new();
+    };
+    listed
+        .iter()
+        .filter(|canonical| {
+            !feeds.iter().any(|feed| {
+                feed.entries.iter().any(|entry| {
+                    let version = entry.content_item_version.as_deref().unwrap_or_default();
+                    entry.content_item_identifier.as_deref() == Some(canonical.as_str())
+                        || is_release_of(version, canonical)
+                })
+            })
+        })
+        .cloned()
+        .collect()
+}
+
 /// The dates of the content items a deployment already serves.
 ///
 /// The key is the canonical identifier and the version identifier of a content
