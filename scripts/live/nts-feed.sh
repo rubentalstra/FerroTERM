@@ -63,7 +63,7 @@ if [ -z "$client_secret" ] && { [ -z "$user" ] || [ -z "$pass" ]; }; then
 fi
 
 echo "== discovery: ${base}/fhir/.well-known/smart-configuration"
-token_endpoint="$(curl --proto '=https' --tlsv1.2 -sSf "${base}/fhir/.well-known/smart-configuration" | jq -r '.token_endpoint')"
+token_endpoint="$(curl --proto '=https' --tlsv1.2 -sSfL --max-redirs 3 "${base}/fhir/.well-known/smart-configuration" | jq -r '.token_endpoint')"
 [ -n "$token_endpoint" ] && [ "$token_endpoint" != "null" ] || { echo "nts-feed: the discovery document names no token_endpoint" >&2; exit 1; }
 echo "   token endpoint: ${token_endpoint}"
 

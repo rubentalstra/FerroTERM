@@ -13,6 +13,22 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`scripts/live/nts-feed.sh` follows the discovery redirect** (#602). The
+  NTS answers its SMART configuration URL with a `301` to the Keycloak
+  discovery document, and the script stopped there with "the discovery
+  document names no token_endpoint"; it now follows up to three redirects,
+  as the add-on already did.
+
+### Changed
+
+- **The NTS add-on names the Dutch canonicals the service serves** (#602):
+  ICD-10-NL, the Labcodeset supplement and its three maps, NHG-Tabel 24, the
+  NHG table prefix, and the zib value set prefix, read from the live service.
+  The book's NTS section records what the feed and the FHIR API carry, the
+  24 hour token lifetimes, and how an unlicensed system is hidden.
+
 ## [0.1.5] - 2026-09-24
 
 ### Added

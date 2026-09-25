@@ -48,14 +48,39 @@ pub mod canonical {
     /// (<https://hl7.org/fhir/R4/terminologies-systems.html>).
     pub const ICD_10: &str = "http://hl7.org/fhir/sid/icd-10";
 
+    /// ICD-10, the Dutch translation the service serves under its own
+    /// canonical, versioned `ICD-10 2021v3cd` and its predecessors.
+    pub const ICD_10_NL: &str = "http://hl7.org/fhir/sid/icd-10-nl";
+
+    /// The Nederlandse Labcodeset, served as a LOINC supplement.
+    pub const LABCODESET: &str = "http://labterminologie.nl/cs/labconcepts";
+
+    /// The three Labcodeset concept maps, one canonical each.
+    pub const LABCODESET_MAPS: [&str; 3] = [
+        "http://labterminologie.nl/cm/labconcepts-materials",
+        "http://labterminologie.nl/cm/labconcepts-outcomes",
+        "http://labterminologie.nl/cm/labconcepts-ucum",
+    ];
+
+    /// NHG-Tabel 24, the Dutch ICPC-1, under the HL7-assigned canonical.
+    pub const ICPC_1_NL: &str = "http://hl7.org/fhir/sid/icpc-1-nl";
+
+    /// The prefix of the other NHG tables; a table's canonical is this prefix,
+    /// its number, and its slug (`nhg-tabel-45-diagnostische-bepalingen`).
+    pub const NHG_TABLE_PREFIX: &str = "https://referentiemodel.nhg.org/tabellen/";
+
+    /// The prefix of the zib value sets, which ART-DECOR publishes as
+    /// `{prefix}{oid}--{yyyymmddhhmmss}`.
+    pub const ZIB_VALUE_SET_PREFIX: &str = "http://decor.nictiz.nl/fhir/ValueSet/";
+
     /// The canonicals a run subscribes to unless the configuration names its
     /// own.
     pub const DEFAULT: [&str; 4] = [SNOMED_CT_NL, LOINC, UCUM, ICD_10];
 }
 
-// TODO(#581): add the canonical identifiers the feed publishes for the
-// Nederlandse Labcodeset, the NHG tables, and the zib value sets, which are
-// readable only from the live listing.
+// NOTE: the canonicals above LOINC/UCUM/ICD-10 were read from the service's
+// FHIR API on 2026-09-25 (issue #602); its syndication feed listed SNOMED CT
+// only, so none of them is a feed identifier yet.
 
 /// Where the add-on reads its credentials.
 ///
