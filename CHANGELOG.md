@@ -21,6 +21,14 @@ fresh link reference.
   document names no token_endpoint"; it now follows up to three redirects,
   as the add-on already did.
 
+- **A subscription to a SNOMED CT edition matches the live NTS feed** (#691).
+  Ontoserver identifies an edition release by the bare code system
+  `http://snomed.info/sct` and carries the edition in the version URI, so a
+  subscription listing the edition URI admitted nothing and a run took nothing.
+  A listed edition now admits a release whose version URI sits under it, the
+  fixture feed carries the live shape, and a built artifact is held under its
+  system as well as its edition, so a re-run recognises the release as served.
+
 ### Changed
 
 - **The NTS add-on names the Dutch canonicals the service serves** (#602):

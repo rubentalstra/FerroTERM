@@ -20,14 +20,32 @@ pub enum Systems {
 }
 
 impl Systems {
-    /// Whether the subscription takes the system named by `canonical`.
+    /// Whether the subscription takes the content item `canonical` at
+    /// `version`.
+    ///
+    /// A listed identifier admits the item that carries it. A listed SNOMED CT
+    /// edition URI also admits an item identified by the bare code system
+    /// whose version URI sits under that edition, which is how Ontoserver
+    /// writes an edition release.
     #[must_use]
-    pub fn admits(&self, canonical: &str) -> bool {
+    pub fn admits(&self, canonical: &str, version: &str) -> bool {
         match self {
             Self::Any => true,
-            Self::Listed(listed) => listed.contains(canonical),
+            Self::Listed(listed) => {
+                listed.contains(canonical)
+                    || listed.iter().any(|edition| is_release_of(version, edition))
+            }
         }
     }
+}
+
+// NOTE: the SNOMED CT URI Standard forms a versioned edition as
+// `{edition URI}/version/{date}` (https://confluence.ihtsdotools.org/display/DOCURI),
+// so a version URI under an edition names a release of that edition.
+fn is_release_of(version: &str, edition: &str) -> bool {
+    version
+        .strip_prefix(edition)
+        .is_some_and(|rest| rest.starts_with("/version/"))
 }
 
 /// What one run takes from one feed: which systems, and which entry kinds.
@@ -263,7 +281,8 @@ fn decide(
     let Some(canonical) = entry.content_item_identifier.as_deref() else {
         return Err(SkipReason::NoCanonical);
     };
-    if !subscription.systems.admits(canonical) {
+    let version = entry.content_item_version.as_deref().unwrap_or_default();
+    if !subscription.systems.admits(canonical, version) {
         return Err(SkipReason::SystemNotSubscribed {
             canonical: canonical.to_owned(),
         });
@@ -277,7 +296,6 @@ fn decide(
     let Some(offered) = entry.updated else {
         return Err(SkipReason::NoDate);
     };
-    let version = entry.content_item_version.as_deref().unwrap_or_default();
     if let Some(held) = holdings.date_of(canonical, version)
         && offered <= held
     {

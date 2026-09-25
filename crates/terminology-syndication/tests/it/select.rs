@@ -251,10 +251,34 @@ fn every_entry_of_the_feed_is_either_taken_or_named_as_skipped() {
 #[test]
 fn a_subscription_with_no_system_filter_admits_every_system() {
     assert_eq!(Subscription::new().systems, Systems::Any);
-    assert!(Subscription::new().systems.admits(VALUE_SET));
+    assert!(Subscription::new().systems.admits(VALUE_SET, ""));
     let listed = Subscription::new().with_system(EDITION);
-    assert!(listed.systems.admits(EDITION));
-    assert!(!listed.systems.admits(VALUE_SET));
+    assert!(listed.systems.admits(EDITION, ""));
+    assert!(!listed.systems.admits(VALUE_SET, ""));
+}
+
+#[test]
+fn a_listed_edition_admits_a_release_identified_by_the_bare_code_system() {
+    let listed = Subscription::new().with_system(EDITION);
+    let release = format!("{EDITION}/version/20260131");
+    assert!(
+        listed.systems.admits("http://snomed.info/sct", &release),
+        "Ontoserver identifies an edition release by the code system, the edition in the version"
+    );
+    assert!(
+        !listed.systems.admits(
+            "http://snomed.info/sct",
+            "http://snomed.info/sct/900000000000207008/version/20260101"
+        ),
+        "a release of another edition is not admitted"
+    );
+    assert!(
+        !listed.systems.admits(
+            "http://snomed.info/sct",
+            &format!("{EDITION}0/version/20260131")
+        ),
+        "an edition whose module id merely starts with the listed one is not admitted"
+    );
 }
 
 #[test]

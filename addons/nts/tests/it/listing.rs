@@ -112,7 +112,7 @@ async fn a_system_offered_only_as_the_binary_index_is_not_syndicable() {
         source
             .not_syndicable(&feed)
             .iter()
-            .all(|refused| refused.canonical != "http://snomed.info/sct/11000146104"),
+            .all(|refused| refused.canonical != "http://snomed.info/sct"),
         "a system that also arrives as RF2 is syndicable"
     );
 }
@@ -132,10 +132,7 @@ async fn the_subscribed_releases_are_taken() {
         .collect();
     assert_eq!(
         taken,
-        vec![
-            "http://snomed.info/sct/11000146104",
-            "http://unitsofmeasure.org"
-        ],
+        vec!["http://snomed.info/sct", "http://unitsofmeasure.org"],
         "the snapshot and the FHIR code system are taken, in feed order"
     );
 }
@@ -149,7 +146,7 @@ async fn a_release_already_served_is_not_taken_again() {
 
     let mut holdings = Holdings::new();
     holdings.record(
-        "http://snomed.info/sct/11000146104",
+        "http://snomed.info/sct",
         "http://snomed.info/sct/11000146104/version/20260331",
         "2026-03-31T09:00:00Z".parse().expect("the date reads"),
     );

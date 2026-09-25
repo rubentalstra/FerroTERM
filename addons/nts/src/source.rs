@@ -160,7 +160,8 @@ impl NtsSource {
             let Some(canonical) = entry.content_item_identifier.as_deref() else {
                 continue;
             };
-            if !self.subscription.systems.admits(canonical) {
+            let version = entry.content_item_version.as_deref().unwrap_or_default();
+            if !self.subscription.systems.admits(canonical, version) {
                 continue;
             }
             offered.entry(canonical).or_default().insert(entry.term());
