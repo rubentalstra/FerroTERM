@@ -30,3 +30,4 @@
 - [NTS sync program](nts-sync-program.md), owner decisions 2026-09-22: separate ferroterm-sync service, addons/ named after the service (nts first), native scheduler no cron, one way, v0.1.4 reserved for it and the old items moved to v0.1.5
 - [PR body licence checkbox](pr-body-licence-checkbox.md), every PR body follows .github/PULL_REQUEST_TEMPLATE.md with the licensing box ticked or contribution-licence-guard fails; owner flagged 2026-09-22
 - [FerroEHR: no worktrees](ferroehr-no-worktrees.md), an agent sent into the FerroEHR clone works in its main checkout on a branch, never a git worktree (that repo's owner rule of 2026-08-06); a brief from here must not override it
+- [Git -C absolute paths](git-c-absolute-paths.md), a `cd` in a compound command does not reliably set cwd for git; `git -C /abs/path` everywhere, and a force push checks the branch name in the same command (2026-09-24, PRs #674/#676 collided)

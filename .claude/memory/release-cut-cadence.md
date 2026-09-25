@@ -52,3 +52,12 @@ a quiet machine; #512 carries it.
 - After every FerroTERM release, open the FerroEHR pull request that moves its FerroTERM image pin (quickstart overlay and the `adl2_vetdf_ferroterm` test) to the new tag and digest; the owner asked for this on 2026-09-22, first for v0.1.4. The step is in `docs/release.md` §After the tag.
 
 - v0.1.4 (2026-09-23): cut from a git worktree. The worktree has no `data/` or `artifacts/` (ignored, main clone only), and `data/*/.gitkeep` dirs are tracked, so do not symlink over them; run `ferroterm-bench` from the main clone with `--config`, `--out`, `--server`, `--build` pointing at the worktree. `cargo build --locked` fails right after the version bump until `cargo update -w` follows the lock. In zsh `status` is read-only; never use it as a variable name in a Bash call.
+
+v0.1.5 (2026-09-24): the owner moved the unfinishable items (the quiet-machine
+record set #642, the NTS live feed #602, the viewer review #515) to v0.1.6 and
+asked for the cut the moment the last PR merged, then said "you push the tag"
+when I left the tag to them. Cut in one commit (versions, fixtures, changelog),
+tag signed and pushed, artifacts verified, then the FerroEHR pin PR (#3484
+there): compose overlay, hosted compose, `_helpers.tpl` pinned version,
+`values.yaml` digest, Chart.yaml annotation and version, `validate.sh --update`
+for the goldens, and `helm-docs` for the chart README.

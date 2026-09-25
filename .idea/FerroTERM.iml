@@ -43,6 +43,8 @@
       <sourceFolder url="file://$MODULE_DIR$/app/ferroterm-sync/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/terminology-syndication/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/terminology-syndication/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/sct-scg/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/sct-scg/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/artifacts" />
