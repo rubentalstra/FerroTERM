@@ -68,6 +68,7 @@ impl Clock for TestClock {
 pub(crate) struct ReferenceSource {
     name: String,
     feed_url: String,
+    fhir_api_url: Option<String>,
     client: reqwest::Client,
     yields: Vec<CategoryTerm>,
 }
@@ -78,9 +79,16 @@ impl ReferenceSource {
         Self {
             name: String::from("reference"),
             feed_url: feed_url.to_owned(),
+            fhir_api_url: None,
             client: reqwest::Client::new(),
             yields: CategoryTerm::NAMED.to_vec(),
         }
+    }
+
+    /// The same source also listing the FHIR API at `fhir_api_url`.
+    pub(crate) fn with_fhir_api(mut self, fhir_api_url: &str) -> Self {
+        self.fhir_api_url = Some(fhir_api_url.to_owned());
+        self
     }
 }
 
@@ -91,6 +99,10 @@ impl Source for ReferenceSource {
 
     fn feed_url(&self) -> &str {
         &self.feed_url
+    }
+
+    fn fhir_api_url(&self) -> Option<&str> {
+        self.fhir_api_url.as_deref()
     }
 
     fn yields(&self) -> &[CategoryTerm] {
@@ -309,6 +321,67 @@ impl Harness {
             .respond_with(ResponseTemplate::new(200).set_body_string(body))
             .mount(&self.feed)
             .await;
+    }
+
+    /// Serves `resources` on the FHIR API beside the feed: one search page
+    /// per type, and each resource by its id.
+    ///
+    /// A resource is a full FHIR JSON body; the search summary the harness
+    /// answers carries its `id`, `url`, `version`, `content`, and
+    /// `meta.lastUpdated`, which is what the listing reads.
+    pub(crate) async fn publish_api(&self, resources: &[serde_json::Value]) {
+        for kind in ["CodeSystem", "ValueSet", "ConceptMap"] {
+            let entries: Vec<serde_json::Value> = resources
+                .iter()
+                .filter(|resource| {
+                    resource
+                        .get("resourceType")
+                        .and_then(serde_json::Value::as_str)
+                        == Some(kind)
+                })
+                .map(|resource| {
+                    let mut summary = serde_json::Map::new();
+                    for name in ["resourceType", "id", "url", "version", "content", "meta"] {
+                        if let Some(value) = resource.get(name) {
+                            summary.insert(name.to_owned(), value.clone());
+                        }
+                    }
+                    serde_json::json!({"resource": summary})
+                })
+                .collect();
+            Mock::given(method("GET"))
+                .and(path(format!("/fhir/{kind}")))
+                .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "resourceType": "Bundle",
+                    "type": "searchset",
+                    "link": [{"relation": "self", "url": "self"}],
+                    "entry": entries
+                })))
+                .mount(&self.feed)
+                .await;
+        }
+        for resource in resources {
+            let kind = resource["resourceType"].as_str().expect("a resource type");
+            let id = resource["id"].as_str().expect("an id");
+            Mock::given(method("GET"))
+                .and(path(format!("/fhir/{kind}/{id}")))
+                .respond_with(ResponseTemplate::new(200).set_body_json(resource))
+                .mount(&self.feed)
+                .await;
+        }
+    }
+
+    /// The address of the harness FHIR API.
+    pub(crate) fn fhir_api_url(&self) -> String {
+        format!("{}/fhir", self.feed.uri())
+    }
+
+    /// The source reading the feed and the FHIR API, under `subscription`.
+    pub(crate) fn source_with_api(&self, subscription: Subscription) -> ConfiguredSource {
+        ConfiguredSource::new(
+            Box::new(ReferenceSource::new(&self.feed_url()).with_fhir_api(&self.fhir_api_url())),
+            subscription,
+        )
     }
 
     /// Answers every reload with `status`.

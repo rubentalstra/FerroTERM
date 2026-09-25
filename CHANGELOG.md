@@ -13,6 +13,21 @@ fresh link reference.
 
 ## [Unreleased]
 
+### Added
+
+- **The sync lists a service's FHIR API beside its feed** (#692). The Nictiz
+  NTS feed carries only the SNOMED CT binary index, and its `CodeSystem`,
+  `ValueSet`, and `ConceptMap` resources answer on its FHIR endpoint. A source
+  that names a FHIR API is searched per type and paged to the end, each
+  resource becomes an entry the subscription and the replace rule read as they
+  read the feed, and it goes through the resource lane with the digest of what
+  arrived recorded, since the API advertises none. The run record carries the
+  API address, how many resources it listed, each entry's origin, and the
+  subscribed canonicals no listing carried, which the account could not see. A
+  `CodeSystem` listed with `content` `not-present` is reported, never served.
+  The NTS add-on lists its FHIR endpoint by default (`fhir_api = false` keeps a
+  run to the feed).
+
 ### Fixed
 
 - **`scripts/live/nts-feed.sh` follows the discovery redirect** (#602). The

@@ -16,6 +16,13 @@ pub const NTS_BASE_URL: &str = "https://terminologieserver.nl";
 /// The path of the syndication feed under the base URL.
 pub const FEED_PATH: &str = "/synd/syndication.xml";
 
+/// The path of the FHIR endpoint under the base URL.
+///
+/// The feed carries only the SNOMED CT binary index (measured 2026-09-25,
+/// issue #602); the `CodeSystem`, `ValueSet`, and `ConceptMap` resources
+/// answer here.
+pub const FHIR_API_PATH: &str = "/fhir";
+
 /// The path of the SMART configuration document under the base URL.
 ///
 /// The document is served beside the FHIR endpoint, which is where SMART App
@@ -109,6 +116,11 @@ pub struct NtsConfig {
     pub base_url: String,
     /// The feed's address, when it is not [`FEED_PATH`] under the base URL.
     pub feed_url: Option<String>,
+    /// The FHIR endpoint's address, when it is not [`FHIR_API_PATH`] under
+    /// the base URL.
+    pub fhir_api_url: Option<String>,
+    /// Whether a run lists the FHIR endpoint beside the feed.
+    pub fhir_api: bool,
     /// Where the credentials are read from.
     pub credentials: CredentialSource,
     /// The canonical identifiers the run takes.
@@ -123,6 +135,8 @@ impl Default for NtsConfig {
             name: String::from("nts"),
             base_url: String::from(NTS_BASE_URL),
             feed_url: None,
+            fhir_api_url: None,
+            fhir_api: true,
             credentials: CredentialSource::Environment,
             systems: canonical::DEFAULT
                 .iter()
@@ -150,6 +164,16 @@ impl NtsConfig {
         self.feed_url
             .clone()
             .unwrap_or_else(|| format!("{}{FEED_PATH}", self.base_url.trim_end_matches('/')))
+    }
+
+    /// The address of the FHIR endpoint a run lists, when it lists one.
+    #[must_use]
+    pub fn fhir_api_url(&self) -> Option<String> {
+        self.fhir_api.then(|| {
+            self.fhir_api_url.clone().unwrap_or_else(|| {
+                format!("{}{FHIR_API_PATH}", self.base_url.trim_end_matches('/'))
+            })
+        })
     }
 
     /// The address of the SMART configuration document.
@@ -198,6 +222,19 @@ mod tests {
             config.discovery_url(),
             "https://terminologieserver.nl/fhir/.well-known/smart-configuration",
             "discovery sits beside the FHIR endpoint"
+        );
+        assert_eq!(
+            config.fhir_api_url().as_deref(),
+            Some("https://terminologieserver.nl/fhir"),
+            "the FHIR endpoint is listed by default, since the feed carries no resources"
+        );
+        let without = NtsConfig {
+            fhir_api: false,
+            ..NtsConfig::default()
+        };
+        assert!(
+            without.fhir_api_url().is_none(),
+            "a deployment can keep a run to the feed"
         );
     }
 

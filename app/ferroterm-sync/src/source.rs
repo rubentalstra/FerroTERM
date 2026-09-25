@@ -93,6 +93,12 @@ impl ConfiguredSource {
         self.fixups.as_deref()
     }
 
+    /// The subscribed canonicals none of `feeds` lists.
+    #[must_use]
+    pub fn unseen(&self, feeds: &[&terminology_syndication::model::Feed]) -> Vec<String> {
+        terminology_syndication::select::unseen(&self.subscription, feeds)
+    }
+
     /// What a run takes from `feed`, and what it leaves behind with a reason.
     #[must_use]
     pub fn select(

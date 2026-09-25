@@ -56,6 +56,31 @@ impl Trigger {
     }
 }
 
+/// Where a run saw an entry: the feed, or the service's FHIR API.
+///
+/// The feed is the default, which is what a record written before the API
+/// lane existed means by saying nothing.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Origin {
+    /// The syndication feed, whose entries carry a digest.
+    #[default]
+    Feed,
+    /// The FHIR API, listed by search, whose resources carry none.
+    FhirApi,
+}
+
+impl Origin {
+    /// The origin's name, as a record and a log line write it.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Feed => "feed",
+            Self::FhirApi => "fhir-api",
+        }
+    }
+}
+
 /// One entry the run took, and what became of it.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct TakenEntry {
@@ -63,6 +88,9 @@ pub struct TakenEntry {
     pub entry_id: String,
     /// The feed entry's title.
     pub title: String,
+    /// Where the run saw the entry.
+    #[serde(default)]
+    pub origin: Origin,
     /// The canonical identifier of the content item.
     pub canonical: String,
     /// The version identifier of the content item.
@@ -94,6 +122,9 @@ pub struct SkippedEntry {
     pub entry_id: String,
     /// The feed entry's title.
     pub title: String,
+    /// Where the run saw the entry.
+    #[serde(default)]
+    pub origin: Origin,
     /// Why the run left it behind.
     pub reason: String,
 }
@@ -107,6 +138,17 @@ pub struct SourceRun {
     pub feed_url: String,
     /// How many entries the feed offered.
     pub entries_seen: usize,
+    /// The FHIR API the source lists beside its feed, when it has one.
+    #[serde(default)]
+    pub fhir_api_url: Option<String>,
+    /// How many resources the FHIR API listed.
+    #[serde(default)]
+    pub api_entries_seen: usize,
+    /// The subscribed canonicals that neither the feed nor the FHIR API
+    /// listed: not visible to the account, which is a licence question and
+    /// never proof that the service lacks the system.
+    #[serde(default)]
+    pub not_visible: Vec<String>,
     /// The entries the run took.
     pub taken: Vec<TakenEntry>,
     /// The entries the run left behind.
@@ -123,6 +165,9 @@ impl SourceRun {
             source: name.to_owned(),
             feed_url: feed_url.to_owned(),
             entries_seen: 0,
+            fhir_api_url: None,
+            api_entries_seen: 0,
+            not_visible: Vec::new(),
             taken: Vec::new(),
             skipped: Vec::new(),
             errors: Vec::new(),

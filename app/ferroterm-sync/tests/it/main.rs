@@ -15,6 +15,7 @@
 )]
 
 mod admin;
+mod api;
 mod failure;
 mod lanes;
 mod manual;
